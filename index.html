@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tank Check</title>
+<meta name="description" content="Walk the lab gas tank route, log every reading, copy a ready to paste Slack update.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#eaeef4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a0f15" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tank Check">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+/* ---------- palette ---------- */
+:root{
+  --bg:#eaeef4; --surface:#ffffff; --surface-2:#dde4ee;
+  --text:#0b1220; --muted:#5a6472; --line:#c9d2e0;
+  --accent:#1455d4; --accent-ink:#ffffff; --accent-soft:#e2ebff;
+  --ok:#0d7a48; --warn:#9a4a12;
+  --shadow:0 1px 2px rgba(11,18,32,.07), 0 10px 26px rgba(11,18,32,.07);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0a0f15; --surface:#151d27; --surface-2:#1f2a37;
+    --text:#f2f6fb; --muted:#a3b2c4; --line:#2d3947;
+    --accent:#4f91ff; --accent-ink:#04101f; --accent-soft:#16283f;
+    --ok:#46d68d; --warn:#ffb057;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 26px rgba(0,0,0,.4);
+  }
+}
+
+/* ---------- base ---------- */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  overflow:hidden; overscroll-behavior:none;
+  -webkit-tap-highlight-color:transparent;
+  -webkit-user-select:none; user-select:none;
+}
+button{font:inherit;color:inherit;margin:0;touch-action:manipulation;cursor:pointer}
+.app{
+  height:100vh; height:100dvh; display:flex; flex-direction:column;
+  padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom);
+  padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right);
+}
+
+/* ---------- top bar ---------- */
+.topbar{display:flex;align-items:center;gap:8px;padding:6px 10px 2px;min-height:52px;flex:none}
+.iconbtn{
+  min-width:48px;min-height:48px;display:inline-flex;align-items:center;justify-content:center;
+  gap:6px;padding:0 12px;border:0;background:transparent;border-radius:14px;
+  color:var(--text);font-size:16px;font-weight:600;
+}
+.iconbtn:active{background:var(--surface-2)}
+.iconbtn[disabled]{opacity:.32}
+.topbar .step{margin-left:auto;padding-right:8px;font-size:15px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
+.progress{flex:none;height:4px;margin:0 16px 4px;background:var(--surface-2);border-radius:99px;overflow:hidden}
+.progress > i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .18s ease}
+
+/* ---------- screen shell ---------- */
+.screen{flex:1;display:flex;flex-direction:column;min-height:0}
+.scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.titles{flex:none;padding:2px 18px 6px}
+.room{font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1.15}
+.tank{margin-top:2px;font-size:17px;font-weight:600;color:var(--muted)}
+
+/* ---------- readout ---------- */
+.readout{flex:none;display:flex;align-items:baseline;justify-content:center;gap:8px;padding:4px 0 6px}
+.readout .num{font-size:clamp(52px,17vw,80px);font-weight:800;line-height:1;letter-spacing:-.035em;font-variant-numeric:tabular-nums}
+.readout .unit{font-size:20px;font-weight:700;color:var(--muted)}
+
+/* ---------- vertical slider ---------- */
+.sliderwrap{flex:1;min-height:110px;display:grid;grid-template-columns:58px 138px 58px;justify-content:center;padding:4px 0 8px}
+.sl{grid-column:2;position:relative;touch-action:none;-webkit-user-select:none;user-select:none;outline:none}
+.sl-track{position:absolute;inset:0;background:var(--surface-2);border:1px solid var(--line);border-radius:24px;overflow:hidden}
+.sl-fill{position:absolute;left:0;right:0;bottom:0;background:var(--accent)}
+.sl-thumb{
+  position:absolute;top:0;left:-7px;right:-7px;height:54px;border-radius:16px;
+  background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  will-change:transform;
+}
+.sl-thumb i{display:block;width:30px;height:2px;border-radius:2px;background:var(--muted);opacity:.85}
+.sl.dragging .sl-thumb{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft), var(--shadow)}
+.sl:focus-visible .sl-thumb{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft), var(--shadow)}
+.sl-ticks{position:absolute;top:0;bottom:0;left:-58px;width:50px;pointer-events:none}
+.sl-ticks span{position:absolute;right:0;transform:translateY(50%);font-size:13px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* ---------- buttons ---------- */
+.controls{flex:none;display:flex;flex-direction:column;gap:10px;padding:6px 16px 14px}
+.btnrow{display:flex;gap:10px}
+.btn{
+  flex:1;min-height:56px;padding:0 16px;border-radius:16px;border:1px solid var(--line);
+  background:var(--surface);color:var(--text);font-size:18px;font-weight:700;
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;box-shadow:var(--shadow);
+}
+.btn:active{transform:translateY(1px);background:var(--surface-2)}
+.btn-primary{min-height:64px;font-size:20px;background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.btn-primary:active{background:var(--accent);filter:brightness(.94)}
+.btn-primary[disabled]{opacity:.45}
+.btn-quiet{background:transparent;box-shadow:none;border-color:transparent;color:var(--muted);font-size:17px;min-height:52px}
+.btn-warn{color:var(--warn)}
+
+/* ---------- storage counters ---------- */
+.rows{display:flex;flex-direction:column;gap:10px;padding:4px 16px 16px}
+.row{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:10px 12px;box-shadow:var(--shadow);
+}
+.row .label{font-size:18px;font-weight:700}
+.counter{display:flex;align-items:center;gap:6px}
+.cbtn{
+  width:56px;height:56px;border-radius:16px;border:1px solid var(--line);background:var(--surface-2);
+  display:inline-flex;align-items:center;justify-content:center;
+}
+.cbtn:active{background:var(--accent-soft)}
+.cbtn[disabled]{opacity:.35}
+.count{min-width:48px;text-align:center;font-size:30px;font-weight:800;font-variant-numeric:tabular-nums}
+.hint{padding:0 18px 8px;font-size:15px;color:var(--muted);line-height:1.45}
+
+/* ---------- pH screen ---------- */
+.center{flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;padding:8px 20px;min-height:0}
+.prompt{font-size:24px;font-weight:700;line-height:1.35;text-align:center}
+.note{
+  width:100%;min-height:104px;padding:14px;border-radius:16px;border:1px solid var(--line);
+  background:var(--surface);color:var(--text);font:inherit;font-size:18px;resize:none;
+  -webkit-user-select:text;user-select:text;
+}
+.note:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+
+/* ---------- home / review / output ---------- */
+.pad{padding:8px 16px 16px;display:flex;flex-direction:column;gap:12px}
+.hero{padding:14px 18px 2px}
+.hero h1{margin:0;font-size:34px;font-weight:800;letter-spacing:-.03em}
+.hero p{margin:6px 0 0;font-size:17px;color:var(--muted);line-height:1.45}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:var(--shadow)}
+.card h2{margin:0 0 4px;font-size:17px;font-weight:700}
+.card p{margin:0;font-size:15px;color:var(--muted);line-height:1.45}
+.group{margin:14px 0 6px;padding:0 18px;font-size:14px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.item{
+  display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+  background:var(--surface);border:1px solid var(--line);border-radius:16px;
+  padding:12px 14px;min-height:64px;margin-bottom:8px;box-shadow:var(--shadow);
+}
+.item:active{background:var(--surface-2)}
+.item .who{font-size:17px;font-weight:700;flex:1;min-width:0}
+.item .what{font-size:17px;font-weight:700;color:var(--accent);text-align:right;font-variant-numeric:tabular-nums}
+.item .chev{color:var(--muted);display:flex;flex:none}
+.item .what.small{font-size:15px;font-weight:600}
+pre.msg{
+  margin:0;padding:16px;background:var(--surface);border:1px solid var(--line);border-radius:18px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:15px;line-height:1.55;
+  white-space:pre-wrap;word-break:break-word;box-shadow:var(--shadow);
+  -webkit-user-select:text;user-select:text;
+}
+
+/* ---------- toast ---------- */
+.toast{
+  position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));
+  transform:translateX(-50%) translateY(14px);
+  max-width:calc(100% - 32px);padding:13px 20px;border-radius:999px;
+  background:var(--text);color:var(--bg);font-size:16px;font-weight:700;text-align:center;
+  opacity:0;pointer-events:none;transition:opacity .18s ease, transform .18s ease;z-index:50;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ---------- short screens (landscape) ---------- */
+@media (max-height:600px){
+  .readout .num{font-size:46px}
+  .room{font-size:21px}
+  .tank{font-size:15px}
+  .sliderwrap{min-height:76px}
+  .btn{min-height:50px}
+  .btn-primary{min-height:54px;font-size:18px}
+  .hero h1{font-size:26px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+<div id="app" class="app"></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+
+/* ==========================================================================
+   CONFIG
+   --------------------------------------------------------------------------
+   Everything a labmate might need to change lives in this one object.
+   You should never have to touch anything below the "END OF CONFIG" line.
+
+   The app walks "route" from top to bottom, in order. Reorder the entries
+   here and both the screens and the Slack message reorder to match.
+
+   There are three kinds of stop:
+
+     type: "room"  one slider screen per tank, then a storage screen
+                   if storage is true.
+     type: "ln2"   one 0 to 100 percent slider screen.
+     type: "ph"    the pH probe confirmation screen.
+
+   For a room:
+     name     Shown big at the top of the screen, and in the Slack message.
+     number   Room number, shown next to the name: Secondary (3326).
+     storage  true  = ask for stored cylinder counts and print a Storage line.
+              false = skip the storage screen, print no Storage line at all.
+     tanks    One entry per tank that is currently running:
+                label  what the screen calls it, e.g. "CO2 Tank 1"
+                gas    what the Slack message calls it, e.g. "CO2"
+                min    bottom of the slider, in psi
+                max    top of the slider, in psi
+                start  OPTIONAL starting value. Leave it out and the slider
+                       starts halfway up.
+
+   To add a tank:    add another { label, gas, min, max } line to that room.
+   To remove a tank: delete its line.
+   To add a room:    copy a whole { type: "room", ... } block and edit it.
+   To change the walking order: move the blocks up or down in the list.
+   ========================================================================== */
+
+var CONFIG = {
+
+  /* Shown on the opening screen. */
+  appTitle: "Tank Check",
+  appSubtitle: "Walk the route, log every tank, copy the Slack update.",
+
+  /* The walking route, in the order you physically walk it. */
+  route: [
+
+    {
+      type: "room",
+      name: "Secondary",
+      number: "3326",
+      storage: true,
+      tanks: [
+        { label: "N2 Tank 1",  gas: "N2",  min: 0, max: 3000 },
+        { label: "CO2 Tank 1", gas: "CO2", min: 0, max: 1200 },
+        { label: "CO2 Tank 2", gas: "CO2", min: 0, max: 1200 }
+      ]
+    },
+
+    {
+      type: "ln2",
+      name: "LN",          /* shown on the screen: LN (3325) */
+      number: "3325",
+      title: "LN2",        /* the heading used in the Slack message */
+      min: 0,
+      max: 100
+    },
+
+    {
+      type: "room",
+      name: "Primary",
+      number: "3343",
+      storage: true,
+      tanks: [
+        { label: "CO2 Tank 1", gas: "CO2", min: 0, max: 1200 },
+        { label: "CO2 Tank 2", gas: "CO2", min: 0, max: 1200 }
+      ]
+    },
+
+    {
+      type: "room",
+      name: "911 Room",
+      number: "3346",
+      storage: true,
+      tanks: [
+        { label: "CO2 Tank 1", gas: "CO2", min: 0, max: 2000 },
+        { label: "N2 Tank 1",  gas: "N2",  min: 0, max: 3000 }
+      ]
+    },
+
+    {
+      type: "room",
+      name: "iPSC Room",
+      number: "2308",
+      storage: false,
+      tanks: [
+        { label: "CO2 Tank 1", gas: "CO2", min: 0, max: 1200 },
+        { label: "CO2 Tank 2", gas: "CO2", min: 0, max: 1200 }
+      ]
+    },
+
+    {
+      type: "ph",
+      title: "pH Probe"    /* the heading used in the Slack message */
+    }
+
+  ],
+
+  /* How the sliders move. */
+  psiStep: 50,       /* dragging snaps to this many psi */
+  psiFineStep: 10,   /* the two small buttons under a psi slider */
+  pctStep: 1,        /* dragging the LN2 slider snaps to whole percents */
+  pctFineStep: 1,    /* the two small buttons under the LN2 slider */
+
+  /* The four counters on every storage screen, in the order they are
+     listed on screen and in the Slack message.
+       key    internal name, must stay unique
+       label  what the screen calls it
+       gas    what the Slack message calls it
+       state  "full" or "empty", printed in parentheses */
+  storageItems: [
+    { key: "n2Full",   label: "N2 full",   gas: "N2",  state: "full"  },
+    { key: "n2Empty",  label: "N2 empty",  gas: "N2",  state: "empty" },
+    { key: "co2Full",  label: "CO2 full",  gas: "CO2", state: "full"  },
+    { key: "co2Empty", label: "CO2 empty", gas: "CO2", state: "empty" }
+  ],
+
+  /* Wording for the pH probe screen and its line in the Slack message. */
+  ph: {
+    prompt: "Verify the pH probe is calibrated and stored correctly.",
+    okButton: "Calibrated and stored correctly",
+    okLine: "Calibrated and stored correctly :white_check_mark:",
+    attentionButton: "Needs attention",
+    attentionPrefix: "Needs attention: ",
+    attentionSuffix: " :warning:",
+    notePlaceholder: "What is wrong with it?"
+  },
+
+  /* The Slack message is NOT printed in walking order. You walk past LN2
+     second, but the message prints all the rooms first and LN2 near the end,
+     the way the lab has always written it. This list sets the section order of
+     the message by stop type: every "room" first (in route order), then "ln2",
+     then "ph". Set it to [] to make the message follow the walk exactly. */
+  messageOrder: ["room", "ln2", "ph"],
+
+  /* The first line of the Slack message. The date in M/D form is added. */
+  messageTitle: "Tank Update",
+
+  /* Vibration in milliseconds when a slider crosses a snap point.
+     Set to 0 to turn the haptic tick off. Android only, iOS ignores it. */
+  hapticMs: 8
+};
+
+/* ==========================  END OF CONFIG  ============================== */
+
+
+/* ---------- tiny helpers ---------- */
+var STORE_KEY = "tankcheck.session.v1";
+
+function h(tag, attrs, kids){
+  var n = document.createElement(tag), k, v;
+  if (attrs) for (k in attrs){
+    v = attrs[k];
+    if (v === null || v === undefined || v === false) continue;
+    if (k === "class") n.className = v;
+    else if (k === "text") n.textContent = v;
+    else if (k === "html") n.innerHTML = v;
+    else if (k.slice(0,2) === "on") n.addEventListener(k.slice(2), v);
+    else n.setAttribute(k, v);
+  }
+  if (kids){
+    if (!Array.isArray(kids)) kids = [kids];
+    for (var i=0;i<kids.length;i++){
+      var c = kids[i];
+      if (c === null || c === undefined || c === false) continue;
+      n.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+    }
+  }
+  return n;
+}
+function pick(a, b){ return (a === undefined || a === null) ? b : a; }
+function svg(d, size, w){
+  return '<svg viewBox="0 0 24 24" width="' + (size||24) + '" height="' + (size||24) +
+         '" fill="none" stroke="currentColor" stroke-width="' + (w||2.4) +
+         '" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
+}
+var ICON = {
+  back:  svg('<path d="M15 5l-7 7 7 7"/>'),
+  chev:  svg('<path d="M9 5l7 7-7 7"/>', 20, 2.2),
+  check: svg('<path d="M4 12.5l5.5 5.5L20 6"/>', 26, 3),
+  plus:  svg('<path d="M12 5v14M5 12h14"/>', 26, 2.8),
+  minus: svg('<path d="M5 12h14"/>', 26, 2.8),
+  copy:  svg('<rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V5.5A1.5 1.5 0 0 1 6.5 4H15"/>', 24, 2.2),
+  warn:  svg('<path d="M12 8v5M12 17h.01"/><path d="M10.3 3.9L2.6 17.4A2 2 0 0 0 4.3 20.4h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>', 22, 2.2)
+};
+function buzz(){
+  if (!CONFIG.hapticMs) return;
+  try { if (navigator.vibrate) navigator.vibrate(CONFIG.hapticMs); } catch(e){}
+}
+var toastTimer = null;
+function toast(msg){
+  var t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.classList.remove("show"); }, 2400);
+}
+function todayMD(){
+  var d = new Date();
+  return (d.getMonth()+1) + "/" + d.getDate();
+}
+function relTime(ts){
+  var s = Math.max(0, Math.round((Date.now() - ts)/1000));
+  if (s < 90) return "just now";
+  var m = Math.round(s/60);
+  if (m < 60) return m + " min ago";
+  var hr = Math.round(m/60);
+  if (hr < 24) return hr === 1 ? "1 hour ago" : hr + " hours ago";
+  var d = Math.round(hr/24);
+  return d === 1 ? "yesterday" : d + " days ago";
+}
+
+
+/* ---------- build the list of screens from CONFIG ---------- */
+function buildScreens(){
+  var out = [];
+  CONFIG.route.forEach(function(stop, si){
+    if (stop.type === "room"){
+      (stop.tanks || []).forEach(function(tank, ti){
+        out.push({
+          kind: "psi",
+          id: "psi|" + stop.number + "|" + tank.label,
+          stopIndex: si, tankIndex: ti,
+          heading: stop.name + " (" + stop.number + ")",
+          sub: tank.label,
+          min: pick(tank.min, 0), max: pick(tank.max, 3000),
+          step: CONFIG.psiStep, fine: CONFIG.psiFineStep,
+          unit: "psi", start: tank.start
+        });
+      });
+      if (stop.storage){
+        out.push({
+          kind: "storage",
+          id: "storage|" + stop.number,
+          stopIndex: si,
+          heading: stop.name + " (" + stop.number + ")",
+          sub: "Storage"
+        });
+      }
+    } else if (stop.type === "ln2"){
+      out.push({
+        kind: "ln2",
+        id: "ln2|" + pick(stop.number, stop.title),
+        stopIndex: si,
+        heading: stop.name + (stop.number ? " (" + stop.number + ")" : ""),
+        sub: pick(stop.title, "LN2") + " level",
+        min: pick(stop.min, 0), max: pick(stop.max, 100),
+        step: CONFIG.pctStep, fine: CONFIG.pctFineStep,
+        unit: "%", start: stop.start
+      });
+    } else if (stop.type === "ph"){
+      out.push({
+        kind: "ph",
+        id: "ph|" + si,
+        stopIndex: si,
+        heading: pick(stop.title, "pH Probe"),
+        sub: "Last stop"
+      });
+    }
+  });
+  return out;
+}
+var SCREENS = buildScreens();
+
+/* A fingerprint of the route. If CONFIG changes, an old saved session is
+   thrown away instead of being restored onto the wrong screens. */
+var SIGNATURE = (function(){
+  var s = SCREENS.map(function(x){ return x.id + ":" + pick(x.min,"") + "-" + pick(x.max,""); }).join("|");
+  var hash = 5381;
+  for (var i=0;i<s.length;i++){ hash = ((hash*33) ^ s.charCodeAt(i)) >>> 0; }
+  return hash.toString(36) + "." + SCREENS.length;
+})();
+
+function snapTo(v, step, min, max){
+  var out = Math.round((v - min)/step)*step + min;
+  if (out < min) out = min;
+  if (out > max) out = max;
+  return Math.round(out*1000)/1000;
+}
+function defaultValue(screen){
+  if (typeof screen.start === "number") return snapTo(screen.start, screen.step, screen.min, screen.max);
+  return snapTo((screen.min + screen.max)/2, screen.step, screen.min, screen.max);
+}
+function emptyStorage(){
+  var o = {};
+  CONFIG.storageItems.forEach(function(it){ o[it.key] = 0; });
+  return o;
+}
+function answerFor(screen){
+  var a = state.answers[screen.id];
+  if (a !== undefined && a !== null) return a;
+  if (screen.kind === "psi" || screen.kind === "ln2") return defaultValue(screen);
+  if (screen.kind === "storage") return emptyStorage();
+  if (screen.kind === "ph") return { ok: true, note: "" };
+  return null;
+}
+
+
+/* ---------- state and persistence ---------- */
+var state = {
+  phase: "home",       /* home | check | review | output */
+  index: 0,            /* which screen of SCREENS */
+  answers: {},
+  editing: false,      /* true when the screen was opened from the review list */
+  original: null       /* value to restore if that edit is cancelled */
+};
+var saved = null;      /* a restorable session found in localStorage */
+
+function readSaved(){
+  try {
+    var raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return null;
+    var o = JSON.parse(raw);
+    if (!o || o.sig !== SIGNATURE) { localStorage.removeItem(STORE_KEY); return null; }
+    return o;
+  } catch(e){ return null; }
+}
+var saveTimer = null;
+function save(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveNow, 180);
+}
+function saveNow(){
+  clearTimeout(saveTimer);
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify({
+      v: 1, sig: SIGNATURE, savedAt: Date.now(),
+      phase: state.phase === "home" ? "check" : state.phase,
+      index: state.index,
+      answers: state.answers
+    }));
+  } catch(e){}
+}
+function clearSaved(){
+  clearTimeout(saveTimer);
+  try { localStorage.removeItem(STORE_KEY); } catch(e){}
+  saved = null;
+}
+window.addEventListener("pagehide", saveNow);
+document.addEventListener("visibilitychange", function(){ if (document.hidden) saveNow(); });
+
+
+/* ---------- the Slack message ---------- */
+function storageText(counts){
+  var parts = [];
+  CONFIG.storageItems.forEach(function(it){
+    var n = (counts && counts[it.key]) || 0;
+    if (n > 0) parts.push(n + " " + it.gas + " (" + it.state + ")");
+  });
+  return parts.length ? parts.join(", ") : "none";
+}
+function screenById(id){
+  for (var i=0;i<SCREENS.length;i++) if (SCREENS[i].id === id) return SCREENS[i];
+  return null;
+}
+/* The route in the order the message prints it, which is not the order you
+   walk it in. See CONFIG.messageOrder. */
+function messageStops(){
+  var order = CONFIG.messageOrder || [];
+  return CONFIG.route.map(function(stop, si){
+    var rank = order.indexOf(stop.type);
+    return { stop: stop, si: si, rank: (rank < 0 ? order.length : rank) };
+  }).sort(function(a, b){
+    return (a.rank - b.rank) || (a.si - b.si);
+  });
+}
+function buildMessage(){
+  var lines = [];
+  lines.push("*" + CONFIG.messageTitle + " (" + todayMD() + ")*");
+
+  messageStops().forEach(function(entry){
+    var stop = entry.stop, si = entry.si;
+    var mine = SCREENS.filter(function(s){ return s.stopIndex === si; });
+
+    if (stop.type === "room"){
+      lines.push("");
+      lines.push("*" + stop.name + " (" + stop.number + ")*");
+      var running = mine.filter(function(s){ return s.kind === "psi"; }).map(function(s){
+        var tank = stop.tanks[s.tankIndex];
+        return tank.gas + " " + answerFor(s) + " psi";
+      });
+      if (running.length) lines.push("Running: " + running.join(" | "));
+      if (stop.storage){
+        var st = mine.filter(function(s){ return s.kind === "storage"; })[0];
+        lines.push("Storage: " + storageText(st ? answerFor(st) : null));
+      }
+    } else if (stop.type === "ln2"){
+      lines.push("");
+      lines.push("*" + pick(stop.title, "LN2") + "*");
+      lines.push("Level: " + answerFor(mine[0]) + "%");
+    } else if (stop.type === "ph"){
+      lines.push("");
+      lines.push("*" + pick(stop.title, "pH Probe") + "*");
+      var a = answerFor(mine[0]);
+      if (a && a.ok === false){
+        lines.push(CONFIG.ph.attentionPrefix + String(a.note || "").trim() + CONFIG.ph.attentionSuffix);
+      } else {
+        lines.push(CONFIG.ph.okLine);
+      }
+    }
+  });
+
+  return lines.join("\n");
+}
+
+
+/* ---------- the vertical slider ---------- */
+/* Only one slider is on screen at a time. render() shuts the previous one
+   down, so a detached slider can never write a stale reading back into the
+   answers when it sees a resize. */
+var activeSlider = null;
+
+function makeSlider(opts){
+  /* opts: min, max, step, fine, unit, value, label, onInput */
+  var THUMB = 54;
+  var value = opts.value;
+  var dead = false;
+
+  var fill  = h("div", { class:"sl-fill" });
+  var track = h("div", { class:"sl-track" }, fill);
+  var thumb = h("div", { class:"sl-thumb" }, [h("i"), h("i"), h("i")]);
+  var ticks = h("div", { class:"sl-ticks" });
+  var tickEls = [];
+  var steps = 4;
+  for (var i=0;i<=steps;i++){
+    var frac = i/steps;
+    var el = h("span", { text: String(Math.round(opts.min + frac*(opts.max-opts.min))) });
+    el._frac = frac;
+    tickEls.push(el);
+    ticks.appendChild(el);
+  }
+
+  var root = h("div", {
+    class: "sl", tabindex: "0", role: "slider",
+    "aria-label": opts.label || "value",
+    "aria-valuemin": String(opts.min), "aria-valuemax": String(opts.max)
+  }, [track, thumb, ticks]);
+
+  function fraction(){ return (value - opts.min) / (opts.max - opts.min); }
+
+  function paint(){
+    if (dead) return;
+    var hgt = root.clientHeight;
+    var span = Math.max(1, hgt - THUMB);
+    var f = fraction();
+    thumb.style.transform = "translateY(" + ((1-f)*span) + "px)";
+    fill.style.height = (f*span + THUMB/2) + "px";
+    for (var i=0;i<tickEls.length;i++){
+      tickEls[i].style.bottom = (THUMB/2 + tickEls[i]._frac*span) + "px";
+    }
+    root.setAttribute("aria-valuenow", String(value));
+    root.setAttribute("aria-valuetext", value + " " + opts.unit);
+    if (opts.onInput) opts.onInput(value);
+  }
+
+  function clamp(v){
+    if (v < opts.min) v = opts.min;
+    if (v > opts.max) v = opts.max;
+    return Math.round(v*1000)/1000;
+  }
+  function setValue(v, haptic){
+    v = clamp(v);
+    if (v === value) return;
+    value = v;
+    paint();
+    if (haptic) buzz();
+  }
+
+  var dragging = false, grabOffset = 0;
+  function valueFromY(clientY){
+    var r = root.getBoundingClientRect();
+    var span = Math.max(1, r.height - THUMB);
+    var top = clientY - r.top - grabOffset - THUMB/2;   /* wanted thumb top */
+    var f = 1 - (top / span);
+    if (f < 0) f = 0;
+    if (f > 1) f = 1;
+    return snapTo(opts.min + f*(opts.max-opts.min), opts.step, opts.min, opts.max);
+  }
+  root.addEventListener("pointerdown", function(e){
+    e.preventDefault();
+    var r = root.getBoundingClientRect();
+    var span = Math.max(1, r.height - THUMB);
+    var thumbTop = (1 - fraction())*span;
+    var local = e.clientY - r.top;
+    /* grabbing the thumb drags it relatively, tapping the track jumps to it */
+    grabOffset = (local >= thumbTop && local <= thumbTop + THUMB) ? (local - thumbTop - THUMB/2) : 0;
+    dragging = true;
+    root.classList.add("dragging");
+    try { root.setPointerCapture(e.pointerId); } catch(err){}
+    root.focus({ preventScroll:true });
+    setValue(valueFromY(e.clientY), true);
+  });
+  root.addEventListener("pointermove", function(e){
+    if (!dragging) return;
+    e.preventDefault();
+    setValue(valueFromY(e.clientY), true);
+  });
+  function endDrag(e){
+    if (!dragging) return;
+    dragging = false;
+    root.classList.remove("dragging");
+    try { root.releasePointerCapture(e.pointerId); } catch(err){}
+  }
+  root.addEventListener("pointerup", endDrag);
+  root.addEventListener("pointercancel", endDrag);
+  root.addEventListener("keydown", function(e){
+    var d = 0;
+    if (e.key === "ArrowUp"   || e.key === "ArrowRight") d =  opts.step;
+    else if (e.key === "ArrowDown" || e.key === "ArrowLeft")  d = -opts.step;
+    else if (e.key === "PageUp")   d =  opts.step*5;
+    else if (e.key === "PageDown") d = -opts.step*5;
+    else if (e.key === "Home"){ e.preventDefault(); setValue(opts.min); return; }
+    else if (e.key === "End"){  e.preventDefault(); setValue(opts.max); return; }
+    else return;
+    e.preventDefault();
+    setValue(value + d);
+  });
+
+  var observer = null;
+  if (window.ResizeObserver){
+    try { observer = new ResizeObserver(paint); observer.observe(root); } catch(err){}
+  }
+  window.addEventListener("resize", paint);
+  requestAnimationFrame(paint);
+
+  return {
+    el: root,
+    get: function(){ return value; },
+    nudge: function(delta){ setValue(value + delta, true); },
+    paint: paint,
+    destroy: function(){
+      dead = true;
+      if (observer){ try { observer.disconnect(); } catch(err){} observer = null; }
+      window.removeEventListener("resize", paint);
+    }
+  };
+}
+
+
+/* ---------- navigation ---------- */
+function goHome(){ state.phase = "home"; render(); }
+function startFresh(){
+  clearSaved();
+  state.answers = {};
+  state.index = 0;
+  state.phase = "check";
+  state.editing = false;
+  saveNow();
+  render();
+}
+function resume(){
+  var s = readSaved();
+  if (!s){ startFresh(); return; }
+  state.answers = s.answers || {};
+  state.index = Math.min(Math.max(0, s.index || 0), SCREENS.length-1);
+  state.phase = (s.phase === "review" || s.phase === "output") ? s.phase : "check";
+  state.editing = false;
+  render();
+}
+function confirmScreen(){
+  if (state.editing){
+    state.editing = false;
+    state.original = null;
+    state.phase = "review";
+  } else if (state.index >= SCREENS.length - 1){
+    state.phase = "review";
+  } else {
+    state.index++;
+  }
+  saveNow();
+  render();
+}
+function goBack(){
+  if (state.editing){
+    var s = SCREENS[state.index];
+    if (state.original === null || state.original === undefined) delete state.answers[s.id];
+    else state.answers[s.id] = state.original;
+    state.editing = false;
+    state.original = null;
+    state.phase = "review";
+  } else if (state.index === 0){
+    state.phase = "home";
+  } else {
+    state.index--;
+  }
+  saveNow();
+  render();
+}
+function editFromReview(i){
+  state.index = i;
+  state.editing = true;
+  var s = SCREENS[i];
+  var cur = state.answers[s.id];
+  state.original = (cur === undefined) ? null : JSON.parse(JSON.stringify(cur));
+  state.phase = "check";
+  render();
+}
+
+
+/* ---------- screen chrome ---------- */
+function topBar(){
+  var label = state.editing ? "Cancel" : "Back";
+  var kids = state.editing
+    ? [h("span", { text:"Cancel" })]
+    : [h("span", { class:"chev", html: ICON.back }), h("span", { text:"Back" })];
+  return h("div", { class:"topbar" }, [
+    h("button", { class:"iconbtn", type:"button", "aria-label":label, onclick: goBack }, kids),
+    h("div", { class:"step", text:"Step " + (state.index+1) + " of " + SCREENS.length })
+  ]);
+}
+function progressBar(done, total){
+  return h("div", { class:"progress" }, h("i", { style:"width:" + Math.round((done/total)*100) + "%" }));
+}
+function titles(screen){
+  return h("div", { class:"titles" }, [
+    h("div", { class:"room", text: screen.heading }),
+    h("div", { class:"tank", text: screen.sub })
+  ]);
+}
+function confirmButton(label){
+  return h("button", { class:"btn btn-primary", type:"button", onclick: confirmScreen }, [
+    h("span", { class:"chev", html: ICON.check }),
+    h("span", { text: label || (state.editing ? "Save" : "Confirm") })
+  ]);
+}
+
+
+/* ---------- screens ---------- */
+function screenSlider(screen){
+  var readNum = h("div", { class:"num", text:"0" });
+  var wrap = h("div", { class:"sliderwrap" });
+
+  var slider = makeSlider({
+    min: screen.min, max: screen.max, step: screen.step, unit: screen.unit,
+    value: answerFor(screen), label: screen.heading + " " + screen.sub,
+    onInput: function(v){
+      readNum.textContent = String(v);
+      state.answers[screen.id] = v;
+      save();
+    }
+  });
+  wrap.appendChild(slider.el);
+  activeSlider = slider;
+
+  var fineLabel = function(n){ return (n > 0 ? "+" : "") + n; };
+  return h("div", { class:"screen" }, [
+    titles(screen),
+    h("div", { class:"readout" }, [readNum, h("div", { class:"unit", text: screen.unit })]),
+    wrap,
+    h("div", { class:"controls" }, [
+      h("div", { class:"btnrow" }, [
+        h("button", { class:"btn", type:"button", "aria-label":"minus " + screen.fine + " " + screen.unit,
+          onclick: function(){ slider.nudge(-screen.fine); } }, fineLabel(-screen.fine)),
+        h("button", { class:"btn", type:"button", "aria-label":"plus " + screen.fine + " " + screen.unit,
+          onclick: function(){ slider.nudge(screen.fine); } }, fineLabel(screen.fine))
+      ]),
+      confirmButton()
+    ])
+  ]);
+}
+
+function screenStorage(screen){
+  var counts = JSON.parse(JSON.stringify(answerFor(screen)));
+  state.answers[screen.id] = counts;
+  save();
+
+  var rows = h("div", { class:"rows" });
+  CONFIG.storageItems.forEach(function(it){
+    var num = h("div", { class:"count", text: String(counts[it.key] || 0), "aria-live":"polite" });
+    var minus = h("button", { class:"cbtn", type:"button", "aria-label":"one fewer " + it.label, html: ICON.minus });
+    var plus  = h("button", { class:"cbtn", type:"button", "aria-label":"one more " + it.label, html: ICON.plus });
+    function set(n){
+      if (n < 0) n = 0;
+      counts[it.key] = n;
+      num.textContent = String(n);
+      minus.disabled = (n === 0);
+      state.answers[screen.id] = counts;
+      save();
+      buzz();
+    }
+    minus.disabled = (counts[it.key] || 0) === 0;
+    minus.addEventListener("click", function(){ set((counts[it.key]||0) - 1); });
+    plus.addEventListener("click", function(){ set((counts[it.key]||0) + 1); });
+    rows.appendChild(h("div", { class:"row" }, [
+      h("div", { class:"label", text: it.label }),
+      h("div", { class:"counter" }, [minus, num, plus])
+    ]));
+  });
+
+  return h("div", { class:"screen" }, [
+    titles(screen),
+    h("div", { class:"hint", text:"Cylinders in storage in this room. Leave every row at 0 if there are none." }),
+    h("div", { class:"scroll" }, rows),
+    h("div", { class:"controls" }, [confirmButton()])
+  ]);
+}
+
+var phNoteOpen = false;
+function screenPh(screen){
+  var a = answerFor(screen);
+  var body;
+
+  if (phNoteOpen){
+    var ta = h("textarea", {
+      class:"note", rows:"3", maxlength:"140",
+      placeholder: CONFIG.ph.notePlaceholder, "aria-label":"What needs attention"
+    });
+    ta.value = (a && a.note) || "";
+    var saveBtn = h("button", { class:"btn btn-primary", type:"button", onclick: function(){
+      var note = ta.value.trim();
+      if (!note){ toast("Add a short note first."); ta.focus(); return; }
+      state.answers[screen.id] = { ok:false, note:note };
+      phNoteOpen = false;
+      saveNow();
+      confirmScreen();
+    }}, [h("span", { class:"chev", html: ICON.check }), h("span", { text: state.editing ? "Save" : "Confirm" })]);
+    saveBtn.disabled = !((a && a.note) || "").trim();
+    ta.addEventListener("input", function(){ saveBtn.disabled = !ta.value.trim(); });
+
+    body = h("div", { class:"screen" }, [
+      titles(screen),
+      h("div", { class:"center" }, [
+        h("div", { class:"prompt", text:"What needs attention?" }),
+        ta
+      ]),
+      h("div", { class:"controls" }, [
+        saveBtn,
+        h("button", { class:"btn btn-quiet", type:"button", onclick: function(){ phNoteOpen = false; render(); } },
+          "Never mind, it is fine")
+      ])
+    ]);
+    setTimeout(function(){ try { ta.focus(); } catch(e){} }, 60);
+  } else {
+    body = h("div", { class:"screen" }, [
+      titles(screen),
+      h("div", { class:"center" }, [
+        h("div", { class:"prompt", text: CONFIG.ph.prompt })
+      ]),
+      h("div", { class:"controls" }, [
+        h("button", { class:"btn btn-primary", type:"button", onclick: function(){
+          state.answers[screen.id] = { ok:true, note:"" };
+          saveNow();
+          confirmScreen();
+        }}, [h("span", { class:"chev", html: ICON.check }), h("span", { text: CONFIG.ph.okButton })]),
+        h("button", { class:"btn btn-quiet btn-warn", type:"button", onclick: function(){ phNoteOpen = true; render(); } },
+          [h("span", { class:"chev", html: ICON.warn }), h("span", { text: CONFIG.ph.attentionButton })])
+      ])
+    ]);
+  }
+  return body;
+}
+
+function reviewValue(screen){
+  var a = answerFor(screen);
+  if (screen.kind === "psi")  return { text: a + " psi", small:false };
+  if (screen.kind === "ln2")  return { text: a + "%", small:false };
+  if (screen.kind === "storage") return { text: storageText(a), small:true };
+  if (screen.kind === "ph"){
+    if (a && a.ok === false) return { text: "Needs attention", small:true };
+    return { text: "Calibrated", small:true };
+  }
+  return { text:"", small:true };
+}
+function screenReview(){
+  var list = h("div", { class:"pad" });
+  var lastStop = -1;
+  SCREENS.forEach(function(s, i){
+    if (s.stopIndex !== lastStop){
+      lastStop = s.stopIndex;
+      list.appendChild(h("div", { class:"group", text: s.heading }));
+    }
+    var v = reviewValue(s);
+    list.appendChild(h("button", { class:"item", type:"button", onclick: function(){ editFromReview(i); } }, [
+      h("div", { class:"who", text: s.sub }),
+      h("div", { class:"what" + (v.small ? " small" : ""), text: v.text }),
+      h("div", { class:"chev", html: ICON.chev })
+    ]));
+  });
+
+  return h("div", { class:"app" }, [
+    h("div", { class:"topbar" }, [
+      h("button", { class:"iconbtn", type:"button", onclick: function(){
+        state.index = SCREENS.length - 1; state.phase = "check"; render();
+      }}, [h("span", { class:"chev", html: ICON.back }), h("span", { text:"Back" })]),
+      h("div", { class:"step", text:"Review" })
+    ]),
+    progressBar(1,1),
+    h("div", { class:"screen" }, [
+      h("div", { class:"hero" }, [
+        h("h1", { text:"Review" }),
+        h("p", { text:"Tap anything to fix it." })
+      ]),
+      h("div", { class:"scroll" }, list),
+      h("div", { class:"controls" }, [
+        h("button", { class:"btn btn-primary", type:"button", onclick: function(){
+          state.phase = "output"; saveNow(); render();
+        }}, [h("span", { text:"Build Slack message" }), h("span", { class:"chev", html: ICON.chev })])
+      ])
+    ])
+  ]);
+}
+
+var clearArmed = false, clearTimer = null;
+function screenOutput(){
+  var msg = buildMessage();
+  var pre = h("pre", { class:"msg", text: msg });
+
+  var copyBtn = h("button", { class:"btn btn-primary", type:"button", onclick: function(){
+    copyText(msg).then(function(ok){
+      if (ok) toast("Copied. Paste it into Slack.");
+      else toast("Copy blocked. Press and hold the message to select it.");
+    });
+  }}, [h("span", { class:"chev", html: ICON.copy }), h("span", { text:"Copy to Slack" })]);
+
+  var newBtn = h("button", { class:"btn", type:"button" }, "Start new check");
+  newBtn.addEventListener("click", function(){
+    if (!clearArmed){
+      clearArmed = true;
+      newBtn.textContent = "Tap again to clear this check";
+      clearTimeout(clearTimer);
+      clearTimer = setTimeout(function(){
+        clearArmed = false;
+        newBtn.textContent = "Start new check";
+      }, 4000);
+      return;
+    }
+    clearArmed = false;
+    clearTimeout(clearTimer);
+    startFresh();
+  });
+
+  return h("div", { class:"app" }, [
+    h("div", { class:"topbar" }, [
+      h("button", { class:"iconbtn", type:"button", onclick: function(){ state.phase = "review"; render(); } },
+        [h("span", { class:"chev", html: ICON.back }), h("span", { text:"Review" })]),
+      h("div", { class:"step", text:"Done" })
+    ]),
+    progressBar(1,1),
+    h("div", { class:"screen" }, [
+      h("div", { class:"hero" }, [
+        h("h1", { text:"Slack message" }),
+        h("p", { text:"Copy this into the lab channel." })
+      ]),
+      h("div", { class:"scroll" }, h("div", { class:"pad" }, pre)),
+      h("div", { class:"controls" }, [copyBtn, newBtn])
+    ])
+  ]);
+}
+
+function screenHome(){
+  saved = readSaved();
+  var hasSaved = !!saved && !!saved.answers && Object.keys(saved.answers).length > 0;
+  var finished = hasSaved && (saved.phase === "review" || saved.phase === "output");
+  var cardTitle = finished ? "Check finished" : "Check in progress";
+  var stepText = "";
+  if (finished){
+    stepText = "Every reading taken, saved " + relTime(saved.savedAt);
+  } else if (hasSaved){
+    stepText = "Step " + (Math.min((saved.index||0)+1, SCREENS.length)) + " of " + SCREENS.length +
+               ", saved " + relTime(saved.savedAt);
+  }
+
+  var buttons = hasSaved
+    ? [
+        h("button", { class:"btn btn-primary", type:"button", onclick: resume },
+          finished ? "Open the message" : "Resume check"),
+        h("button", { class:"btn", type:"button", onclick: startFresh }, "Start over")
+      ]
+    : [ h("button", { class:"btn btn-primary", type:"button", onclick: startFresh }, "Start check") ];
+
+  var stops = CONFIG.route.map(function(s){
+    if (s.type === "room") return s.name;
+    if (s.type === "ln2") return pick(s.title, "LN2");
+    return pick(s.title, "pH probe");
+  }).join(", ");
+
+  return h("div", { class:"app" }, [
+    h("div", { class:"screen" }, [
+      h("div", { class:"scroll" }, h("div", null, [
+        h("div", { class:"hero" }, [
+          h("h1", { text: CONFIG.appTitle }),
+          h("p", { text: CONFIG.appSubtitle })
+        ]),
+        h("div", { class:"pad" }, [
+          h("div", { class:"card" }, [
+            h("h2", { text: todayMD() + " round, " + SCREENS.length + " steps" }),
+            h("p", { text: stops })
+          ]),
+          hasSaved ? h("div", { class:"card" }, [
+            h("h2", { text: cardTitle }),
+            h("p", { text: stepText })
+          ]) : null
+        ])
+      ])),
+      h("div", { class:"controls" }, buttons)
+    ])
+  ]);
+}
+
+
+/* ---------- clipboard ---------- */
+function copyText(text){
+  return new Promise(function(resolve){
+    if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext){
+      navigator.clipboard.writeText(text).then(function(){ resolve(true); }, function(){ resolve(legacyCopy(text)); });
+    } else {
+      resolve(legacyCopy(text));
+    }
+  });
+}
+function legacyCopy(text){
+  try {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.top = "0";
+    ta.style.left = "0";
+    ta.style.width = "1px";
+    ta.style.height = "1px";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try { ta.setSelectionRange(0, text.length); } catch(e){}
+    var ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch(e){ return false; }
+}
+
+
+/* ---------- render ---------- */
+function render(){
+  if (activeSlider){ activeSlider.destroy(); activeSlider = null; }
+  var root = document.getElementById("app");
+  var next;
+
+  if (state.phase === "home"){
+    next = screenHome();
+  } else if (state.phase === "review"){
+    next = screenReview();
+  } else if (state.phase === "output"){
+    next = screenOutput();
+  } else {
+    var screen = SCREENS[state.index];
+    if (screen.kind !== "ph") phNoteOpen = false;
+    var inner =
+      screen.kind === "psi"     ? screenSlider(screen) :
+      screen.kind === "ln2"     ? screenSlider(screen) :
+      screen.kind === "storage" ? screenStorage(screen) :
+                                  screenPh(screen);
+    next = h("div", { class:"app" }, [
+      topBar(),
+      progressBar(state.index + 1, SCREENS.length),
+      inner
+    ]);
+  }
+
+  next.id = "app";
+  root.parentNode.replaceChild(next, root);
+}
+
+/* ---------- go ---------- */
+saved = readSaved();
+render();
+</script>
+</body>
+</html>
