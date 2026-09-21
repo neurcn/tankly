@@ -402,24 +402,30 @@ var CONFIG = {
   /* The first line of the Slack message. The date in M/D form is added. */
   messageTitle: "Tank Update",
 
-  /* Copy puts two versions of the message on the clipboard at once: a
-     formatted one, where the room names are really bold, and a plain text one
-     for anywhere that cannot take formatting. Slack takes the formatted one,
-     so the room names arrive bold with no asterisks to clean up.
+  /* How Copy puts the message on the clipboard.
 
-     This setting only controls that plain text second copy:
-       "clean"   no markup at all. Nothing to tidy up if it is the one used.
-       "unicode" bold letters drawn from Unicode, which need no formatting
-                 support at all, but cannot be found by a Slack search.
-       "markup"  the old *asterisk* and :warning: style, for typing by hand. */
-  copyStyle: "clean",
+       "unicode" Plain text, with the room names written in bold letterforms
+                 that are bold characters in their own right. Nothing has to
+                 interpret any markup, so nothing can get it wrong. This is
+                 the default because it is the only one that survived Slack
+                 on a phone intact. Two things to know: a Slack search for
+                 "Primary" will not match a heading written this way, and a
+                 device without the font for those letters shows boxes.
+       "rich"    Sends real formatting alongside plain text. Slack on a phone
+                 mangled this: with a blank line between sections it ran the
+                 first heading's bold through the whole message, and without
+                 one it dropped the gaps between sections. Kept because it is
+                 the better answer anywhere that handles it properly.
+       "clean"   Plain text, no bold at all. Renders correctly everywhere and
+                 stays searchable. Use this if the bold letters ever show up
+                 as boxes on somebody's phone.
+       "markup"  The old *asterisk* and :warning: style, for typing by hand. */
+  copyStyle: "unicode",
 
-  /* What a blank line is made of in the formatted copy. Slack throws away a
-     line with nothing in it when it reads a pasted message, so the gap
-     between sections has to contain something. This is a non breaking space,
-     which shows as an empty line. If the gaps ever collapse again, the next
-     things to try are "\u2003", an em space, or "\u200b", a zero width
-     space. */
+  /* Only used by copyStyle "rich". A blank line with nothing in it is thrown
+     away when Slack reads a pasted message, so the gap between sections has
+     to hold something. Plain text needs none of this: a real empty line
+     comes through untouched. */
   blankLineChar: "\u00a0",
 
   /* Vibration in milliseconds when a slider crosses a snap point.
@@ -1279,6 +1285,11 @@ var clearArmed = false, clearTimer = null;
 /* The preview is built from the same lines the clipboard gets, with the room
    names really bold, so the box shows what Slack will show. */
 function messageBox(lines){
+  /* Anything but "rich" is pasted as plain text, so preview it as plain text,
+     bold letterforms and all. What you see here is what Slack gets. */
+  if (CONFIG.copyStyle !== "rich"){
+    return h("div", { class:"msg", text: messagePlain(lines, CONFIG.copyStyle) });
+  }
   var box = h("div", { class:"msg" });
   lines.forEach(function(l, i){
     if (i) box.appendChild(document.createTextNode("\n"));
@@ -1402,10 +1413,18 @@ function screenHome(){
    with nothing to tidy up. Anything that cannot read formatting falls back to
    the plain copy, which by default carries no markup either. */
 function copyMessage(lines){
-  var html = messageHtml(lines);
-  var plain = messagePlain(lines, CONFIG.copyStyle);
+  var style = CONFIG.copyStyle;
+  var plain = messagePlain(lines, style === "rich" ? "clean" : style);
 
+  /* Plain text only. Nothing reinterprets it, so nothing can mangle it. */
+  if (style !== "rich") return copyPlain(plain);
+
+  var html = messageHtml(lines);
   return new Promise(function(resolve){
+    function fallback(){
+      if (copyViaEvent(html, plain)){ resolve(true); return; }
+      copyPlain(plain).then(resolve);
+    }
     /* 1. both versions at once, the modern way */
     if (navigator.clipboard && navigator.clipboard.write && window.ClipboardItem && window.isSecureContext){
       try {
@@ -1413,17 +1432,12 @@ function copyMessage(lines){
           "text/html":  new Blob([html],  { type:"text/html"  }),
           "text/plain": new Blob([plain], { type:"text/plain" })
         });
-        navigator.clipboard.write([item]).then(
-          function(){ resolve(true); },
-          function(){ resolve(copyViaEvent(html, plain) || copyPlain(plain)); }
-        );
+        navigator.clipboard.write([item]).then(function(){ resolve(true); }, fallback);
         return;
       } catch(e){ /* fall through */ }
     }
     /* 2. older browsers, and anywhere the write above is refused */
-    if (copyViaEvent(html, plain)){ resolve(true); return; }
-    /* 3. last resort, plain text only */
-    resolve(copyPlain(plain));
+    fallback();
   });
 }
 
@@ -1462,11 +1476,23 @@ function copyViaEvent(html, plain){
   return ok;
 }
 
+/* writeText hands back a promise. Treating it as though it returned a plain
+   true or false means a refusal lands as an unhandled rejection, the copy
+   quietly does nothing, and the toast still claims it worked. Wait for it,
+   and fall back to the old way when it is refused. */
 function copyPlain(text){
-  if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext){
-    try { navigator.clipboard.writeText(text); return true; } catch(e){}
-  }
-  return legacyCopy(text);
+  return new Promise(function(resolve){
+    if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext){
+      try {
+        navigator.clipboard.writeText(text).then(
+          function(){ resolve(true); },
+          function(){ resolve(legacyCopy(text)); }
+        );
+        return;
+      } catch(e){ /* fall through */ }
+    }
+    resolve(legacyCopy(text));
+  });
 }
 function legacyCopy(text){
   try {

@@ -54,20 +54,31 @@ you are **typing** them in the composer. Text that is **pasted** is taken
 literally, so a message written in that style pastes onto a phone with the
 asterisks and the colons still showing.
 
-So the app does not send markup and hope. Copy puts the message on the
-clipboard twice at once: once as genuinely formatted text, where the room
-names really are bold, and once as plain text for anywhere that cannot take
-formatting. Slack takes the formatted one. The warning sign is the real
-character rather than a shortcode, so it survives either way.
+Sending real formatting instead did not work either. Slack on a phone reads
+pasted formatting into its own format and got it wrong both ways we tried it:
+with a blank line between sections it ran the first heading's bold through the
+entire message, and without one it threw the blank lines away.
 
-If some other app ever takes the plain text copy instead, `CONFIG.copyStyle`
-decides what that one looks like:
+So the app sends no markup and no formatting at all. The room names are
+written with bold letterforms, which are bold characters in their own right,
+and the warning sign is the real character rather than the `:warning:`
+shortcode. There is nothing for Slack to interpret, so there is nothing for it
+to get wrong. Blank lines between sections are ordinary blank lines, which
+paste through untouched.
 
-| `copyStyle` | The plain text copy |
+The one real cost: **a Slack search for "Primary" will not match a heading**,
+because those bold letters are different characters from ordinary ones. Every
+other line, including the readings and any ATTENTION notes, is ordinary text
+and stays searchable.
+
+`CONFIG.copyStyle` picks between the approaches:
+
+| `copyStyle` | What Copy puts on the clipboard |
 | --- | --- |
-| `"clean"` (default) | No markup at all. Nothing to tidy up. |
-| `"unicode"` | Bold letters drawn from Unicode, which render bold anywhere with no formatting support. The catch: a Slack search for "Primary" will not find them. |
-| `"markup"` | The old `*asterisk*` and `:warning:` style, which is what you would type by hand. |
+| `"unicode"` (default) | Plain text with bold letterforms. The only one that survived Slack on a phone intact. |
+| `"rich"` | Real formatting alongside plain text. The better answer anywhere that handles it properly, and wrong in Slack on a phone. |
+| `"clean"` | Plain text, no bold at all. Renders correctly everywhere and stays fully searchable. Use this if the bold letters ever show as boxes on somebody's phone. |
+| `"markup"` | The old `*asterisk*` and `:warning:` style, for typing by hand. |
 
 ## The files
 
@@ -162,7 +173,7 @@ Both are under `CONFIG.ph`, along with the wording of the prompt.
 | `alertAtOrBelow` | A tank at or below this reading offers an alert when you confirm it. Default 0, meaning only a completely empty tank. |
 | `storageItems` | The four counter rows and how they are worded in the message. |
 | `attention` | The wording of the flag sheet, the two automatic prompts, and the `ATTENTION` line. |
-| `copyStyle` | What the plain text half of the copy looks like. See the Copy section above. |
+| `copyStyle` | How Copy puts the message on the clipboard. See the Copy section above. |
 | `ph` | The two pH probe buttons and their lines. |
 | `messageOrder` | The order of the sections in the message, which is not the order you walk them. Rooms first, then LN, then the probe. Set it to `[]` to make the message follow the walk. |
 | `messageTitle` | The first line of the message, before the date. |
