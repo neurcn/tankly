@@ -25,12 +25,15 @@ note or just confirm without one. A flagged screen adds a line under its own
 room in the message and puts a warning emoji beside the room name:
 
 ```
-*Secondary (3326)* :warning:
+Secondary (3326) ⚠️
 Running: N2 0 psi | CO2 850 psi | CO2 700 psi
 Storage: 1 N2 (empty), 2 CO2 (empty)
 ATTENTION: Empty N2
 ATTENTION: No full CO2 in storage
 ```
+
+The room name arrives in Slack bold. The box on the output screen shows
+exactly how the message will look once pasted.
 
 Flag it again to edit the note or remove the flag. Two flags in the same room
 give two lines, in the order you walked them.
@@ -43,6 +46,28 @@ has no full cylinders left but empties are sitting there, and on the LN screen
 at 0 percent. The app only ever suggests, it never flags anything on its own,
 and it asks whether or not you already flagged that screen, so it never assumes
 you have covered it.
+
+## How Copy works, and why there are no asterisks
+
+Slack only turns `*asterisks*` into bold, and `:warning:` into an emoji, while
+you are **typing** them in the composer. Text that is **pasted** is taken
+literally, so a message written in that style pastes onto a phone with the
+asterisks and the colons still showing.
+
+So the app does not send markup and hope. Copy puts the message on the
+clipboard twice at once: once as genuinely formatted text, where the room
+names really are bold, and once as plain text for anywhere that cannot take
+formatting. Slack takes the formatted one. The warning sign is the real
+character rather than a shortcode, so it survives either way.
+
+If some other app ever takes the plain text copy instead, `CONFIG.copyStyle`
+decides what that one looks like:
+
+| `copyStyle` | The plain text copy |
+| --- | --- |
+| `"clean"` (default) | No markup at all. Nothing to tidy up. |
+| `"unicode"` | Bold letters drawn from Unicode, which render bold anywhere with no formatting support. The catch: a Slack search for "Primary" will not find them. |
+| `"markup"` | The old `*asterisk*` and `:warning:` style, which is what you would type by hand. |
 
 ## The files
 
@@ -137,6 +162,7 @@ Both are under `CONFIG.ph`, along with the wording of the prompt.
 | `alertAtOrBelow` | A tank at or below this reading offers an alert when you confirm it. Default 0, meaning only a completely empty tank. |
 | `storageItems` | The four counter rows and how they are worded in the message. |
 | `attention` | The wording of the flag sheet, the two automatic prompts, and the `ATTENTION` line. |
+| `copyStyle` | What the plain text half of the copy looks like. See the Copy section above. |
 | `ph` | The two pH probe buttons and their lines. |
 | `messageOrder` | The order of the sections in the message, which is not the order you walk them. Rooms first, then LN, then the probe. Set it to `[]` to make the message follow the walk. |
 | `messageTitle` | The first line of the message, before the date. |
@@ -167,27 +193,27 @@ home screen, pull down on the page to force a refresh.
 ## The message it produces
 
 ```
-*Tank Update (9/21)*
+Tank Update (9/21)
 
-*Secondary (3326)*
+Secondary (3326)
 Running: N2 2700 psi | CO2 850 psi | CO2 700 psi
 Storage: 1 N2 (full), 1 CO2 (full), 1 CO2 (empty)
 
-*Primary (3343)*
+Primary (3343)
 Running: CO2 850 psi | CO2 850 psi
 Storage: 1 CO2 (empty)
 
-*911 Room (3346)*
+911 Room (3346)
 Running: CO2 1500 psi | N2 2400 psi
 
-*iPSC Room (2308)*
+iPSC Room (2308)
 Running: CO2 750 psi | CO2 900 psi
 
-*LN*
+LN
 Level: 27%
 
-*pH Probe*
+pH Probe
 Calibrated and stored correctly
 ```
 
-Single asterisks are Slack's bold, so the room names come out bold when pasted.
+Every line that names a room or a section arrives bold.

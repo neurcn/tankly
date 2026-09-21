@@ -164,12 +164,13 @@ button{font:inherit;color:inherit;margin:0;touch-action:manipulation;cursor:poin
 .item .what{font-size:17px;font-weight:700;color:var(--accent);text-align:right;font-variant-numeric:tabular-nums;flex:1 1 auto;min-width:0}
 .item .chev{color:var(--muted);display:flex;flex:none}
 .item .what.small{font-size:15px;font-weight:600}
-pre.msg{
+.msg{
   margin:0;padding:16px;background:var(--surface);border:1px solid var(--line);border-radius:18px;
-  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:15px;line-height:1.55;
+  font-size:15.5px;line-height:1.55;
   white-space:pre-wrap;word-break:break-word;box-shadow:var(--shadow);
   -webkit-user-select:text;user-select:text;
 }
+.msg b{font-weight:800}
 
 /* ---------- sheets over the screen ---------- */
 .overlay{
@@ -368,7 +369,12 @@ var CONFIG = {
     notePlaceholder: "Low tank, nothing left in storage, etc.",
     linePrefix: "ATTENTION: ",     /* when a note was typed */
     lineBare: "ATTENTION",         /* when it was flagged without a note */
-    roomEmoji: " :warning:",       /* added after the room name */
+
+    /* Added after the room name. This is the real warning character, not the
+       :warning: shortcode, because Slack only turns a shortcode into an emoji
+       while you type it. Pasted text is left exactly as it is. */
+    roomMark: " ⚠️",
+    roomMarkCode: " :warning:",    /* only used when copyStyle is "markup" */
 
     /* Offered after confirming a tank at or below its alert reading. */
     emptyTankAsk: "Create an alert for empty {gas}?",
@@ -395,6 +401,18 @@ var CONFIG = {
 
   /* The first line of the Slack message. The date in M/D form is added. */
   messageTitle: "Tank Update",
+
+  /* Copy puts two versions of the message on the clipboard at once: a
+     formatted one, where the room names are really bold, and a plain text one
+     for anywhere that cannot take formatting. Slack takes the formatted one,
+     so the room names arrive bold with no asterisks to clean up.
+
+     This setting only controls that plain text second copy:
+       "clean"   no markup at all. Nothing to tidy up if it is the one used.
+       "unicode" bold letters drawn from Unicode, which need no formatting
+                 support at all, but cannot be found by a Slack search.
+       "markup"  the old *asterisk* and :warning: style, for typing by hand. */
+  copyStyle: "clean",
 
   /* Vibration in milliseconds when a slider crosses a snap point.
      Set to 0 to turn the haptic tick off. Android only, iOS ignores it. */
@@ -634,10 +652,6 @@ function attentionLines(si){
     return note ? CONFIG.attention.linePrefix + note : CONFIG.attention.lineBare;
   });
 }
-/* A section heading, with the warning emoji when anything in it was flagged. */
-function sectionHead(title, si){
-  return "*" + title + "*" + (flagsForStop(si).length ? CONFIG.attention.roomEmoji : "");
-}
 function phState(a){ return (a && a.state === "recal") ? "recal" : "already"; }
 
 function screenById(id){
@@ -655,40 +669,91 @@ function messageStops(){
     return (a.rank - b.rank) || (a.si - b.si);
   });
 }
-function buildMessage(){
+/* The message as a list of lines. A line is one of:
+     { head:true, text:..., warn:true }  a room name, bold, maybe flagged
+     { text:... }                        an ordinary line
+     { blank:true }                      the gap between sections
+   Keeping the headings marked rather than wrapped in asterisks is what lets
+   the same message be copied as real formatting. */
+function buildMessageLines(){
   var lines = [];
-  lines.push("*" + CONFIG.messageTitle + " (" + todayMD() + ")*");
+  lines.push({ head:true, text: CONFIG.messageTitle + " (" + todayMD() + ")" });
 
   messageStops().forEach(function(entry){
     var stop = entry.stop, si = entry.si;
     var mine = SCREENS.filter(function(s){ return s.stopIndex === si; });
+    var warn = flagsForStop(si).length > 0;
 
     if (stop.type === "room"){
-      lines.push("");
-      lines.push(sectionHead(stop.name + " (" + stop.number + ")", si));
+      lines.push({ blank:true });
+      lines.push({ head:true, text: stop.name + " (" + stop.number + ")", warn: warn });
       var running = mine.filter(function(s){ return s.kind === "psi"; }).map(function(s){
         var tank = stop.tanks[s.tankIndex];
         return tank.gas + " " + answerFor(s) + " psi";
       });
-      if (running.length) lines.push("Running: " + running.join(" | "));
+      if (running.length) lines.push({ text: "Running: " + running.join(" | ") });
       if (stop.storage){
         var st = mine.filter(function(s){ return s.kind === "storage"; })[0];
-        lines.push("Storage: " + storageText(st ? answerFor(st) : null));
+        lines.push({ text: "Storage: " + storageText(st ? answerFor(st) : null) });
       }
     } else if (stop.type === "ln"){
-      lines.push("");
-      lines.push(sectionHead(pick(stop.title, "LN"), si));
-      lines.push("Level: " + answerFor(mine[0]) + "%");
+      lines.push({ blank:true });
+      lines.push({ head:true, text: pick(stop.title, "LN"), warn: warn });
+      lines.push({ text: "Level: " + answerFor(mine[0]) + "%" });
     } else if (stop.type === "ph"){
-      lines.push("");
-      lines.push(sectionHead(pick(stop.title, "pH Probe"), si));
-      lines.push(phState(answerFor(mine[0])) === "recal" ? CONFIG.ph.recalLine : CONFIG.ph.alreadyLine);
+      lines.push({ blank:true });
+      lines.push({ head:true, text: pick(stop.title, "pH Probe"), warn: warn });
+      lines.push({ text: phState(answerFor(mine[0])) === "recal" ? CONFIG.ph.recalLine : CONFIG.ph.alreadyLine });
     }
 
-    attentionLines(si).forEach(function(l){ lines.push(l); });
+    attentionLines(si).forEach(function(t){ lines.push({ text: t }); });
   });
 
-  return lines.join("\n");
+  return lines;
+}
+
+/* Bold letters that need no formatting support, for copyStyle "unicode". */
+function boldUnicode(str){
+  var out = "", c, i;
+  for (i = 0; i < str.length; i++){
+    c = str.charCodeAt(i);
+    if (c >= 65 && c <= 90)       out += String.fromCodePoint(0x1D5D4 + (c - 65));
+    else if (c >= 97 && c <= 122) out += String.fromCodePoint(0x1D5EE + (c - 97));
+    else if (c >= 48 && c <= 57)  out += String.fromCodePoint(0x1D7EC + (c - 48));
+    else out += str.charAt(i);
+  }
+  return out;
+}
+
+function messagePlain(lines, style){
+  var mark = CONFIG.attention.roomMark;
+  return lines.map(function(l){
+    if (l.blank) return "";
+    if (!l.head) return l.text;
+    if (style === "markup") return "*" + l.text + "*" + (l.warn ? CONFIG.attention.roomMarkCode : "");
+    if (style === "unicode") return boldUnicode(l.text) + (l.warn ? mark : "");
+    return l.text + (l.warn ? mark : "");
+  }).join("\n");
+}
+
+function escapeHtml(str){
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/* The formatted version that goes on the clipboard beside the plain one.
+   Deliberately plain <b> and <br>: no <pre>, which some chat apps would read
+   as a code block. */
+function messageHtml(lines){
+  return lines.map(function(l){
+    if (l.blank) return "";
+    if (l.head) return "<b>" + escapeHtml(l.text) + "</b>" + (l.warn ? CONFIG.attention.roomMark : "");
+    return escapeHtml(l.text);
+  }).join("<br>");
+}
+
+/* The plain text version, which is also what the tests read. */
+function buildMessage(){
+  return messagePlain(buildMessageLines(), CONFIG.copyStyle);
 }
 
 
@@ -1195,12 +1260,29 @@ function screenReview(){
 }
 
 var clearArmed = false, clearTimer = null;
+/* The preview is built from the same lines the clipboard gets, with the room
+   names really bold, so the box shows what Slack will show. */
+function messageBox(lines){
+  var box = h("div", { class:"msg" });
+  lines.forEach(function(l, i){
+    if (i) box.appendChild(document.createTextNode("\n"));
+    if (l.blank) return;
+    if (l.head){
+      box.appendChild(h("b", { text: l.text }));
+      if (l.warn) box.appendChild(document.createTextNode(CONFIG.attention.roomMark));
+    } else {
+      box.appendChild(document.createTextNode(l.text));
+    }
+  });
+  return box;
+}
+
 function screenOutput(){
-  var msg = buildMessage();
-  var pre = h("pre", { class:"msg", text: msg });
+  var lines = buildMessageLines();
+  var pre = messageBox(lines);
 
   var copyBtn = h("button", { class:"btn btn-primary", type:"button", onclick: function(){
-    copyText(msg).then(function(ok){
+    copyMessage(lines).then(function(ok){
       if (ok) toast("Copied. Paste it into Slack.");
       else toast("Copy blocked. Press and hold the message to select it.");
     });
@@ -1295,15 +1377,80 @@ function screenHome(){
 }
 
 
-/* ---------- clipboard ---------- */
-function copyText(text){
+/* ---------- clipboard ----------
+   Slack only turns *asterisks* and :shortcodes: into formatting while you
+   type them. Pasted text is taken literally, which is why a plain text copy
+   arrives on a phone with the asterisks showing. So the copy button puts the
+   message on the clipboard twice over: once as formatted text and once as
+   plain text. Slack takes the formatted one and the room names arrive bold,
+   with nothing to tidy up. Anything that cannot read formatting falls back to
+   the plain copy, which by default carries no markup either. */
+function copyMessage(lines){
+  var html = messageHtml(lines);
+  var plain = messagePlain(lines, CONFIG.copyStyle);
+
   return new Promise(function(resolve){
-    if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext){
-      navigator.clipboard.writeText(text).then(function(){ resolve(true); }, function(){ resolve(legacyCopy(text)); });
-    } else {
-      resolve(legacyCopy(text));
+    /* 1. both versions at once, the modern way */
+    if (navigator.clipboard && navigator.clipboard.write && window.ClipboardItem && window.isSecureContext){
+      try {
+        var item = new ClipboardItem({
+          "text/html":  new Blob([html],  { type:"text/html"  }),
+          "text/plain": new Blob([plain], { type:"text/plain" })
+        });
+        navigator.clipboard.write([item]).then(
+          function(){ resolve(true); },
+          function(){ resolve(copyViaEvent(html, plain) || copyPlain(plain)); }
+        );
+        return;
+      } catch(e){ /* fall through */ }
     }
+    /* 2. older browsers, and anywhere the write above is refused */
+    if (copyViaEvent(html, plain)){ resolve(true); return; }
+    /* 3. last resort, plain text only */
+    resolve(copyPlain(plain));
   });
+}
+
+/* Answers the copy event with our own markup. The obvious alternative, letting
+   the browser copy a selected piece of the page, drags this page's colours
+   onto the clipboard with it: copied in dark mode that is near white text,
+   which can paste white on white. This way the clipboard gets exactly the
+   bold and line breaks we wrote and nothing else. */
+function copyViaEvent(html, plain){
+  var box = null, ok = false;
+  var handler = function(e){
+    try {
+      e.clipboardData.setData("text/html", html);
+      e.clipboardData.setData("text/plain", plain);
+      e.preventDefault();
+    } catch(err){}
+  };
+  try {
+    /* something has to be selected or execCommand("copy") never fires */
+    box = document.createElement("div");
+    box.textContent = " ";
+    box.setAttribute("contenteditable", "true");
+    box.style.cssText = "position:fixed;left:0;top:0;width:1px;height:1px;overflow:hidden;opacity:0;";
+    document.body.appendChild(box);
+    var range = document.createRange();
+    range.selectNodeContents(box);
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    document.addEventListener("copy", handler, true);
+    ok = document.execCommand("copy");
+    sel.removeAllRanges();
+  } catch(e){ ok = false; }
+  document.removeEventListener("copy", handler, true);
+  if (box && box.parentNode) box.parentNode.removeChild(box);
+  return ok;
+}
+
+function copyPlain(text){
+  if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext){
+    try { navigator.clipboard.writeText(text); return true; } catch(e){}
+  }
+  return legacyCopy(text);
 }
 function legacyCopy(text){
   try {
