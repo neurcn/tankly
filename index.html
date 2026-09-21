@@ -68,7 +68,15 @@ button{font:inherit;color:inherit;margin:0;touch-action:manipulation;cursor:poin
 /* ---------- screen shell ---------- */
 .screen{flex:1;display:flex;flex-direction:column;min-height:0}
 .scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
-.titles{flex:none;padding:2px 18px 6px}
+.titles{flex:none;display:flex;align-items:flex-start;gap:8px;padding:2px 14px 6px 18px}
+.titletext{flex:1;min-width:0}
+.flagbtn{
+  flex:none;width:48px;height:48px;border-radius:14px;
+  border:1px solid var(--line);background:var(--surface);color:var(--muted);
+  display:inline-flex;align-items:center;justify-content:center;box-shadow:var(--shadow);
+}
+.flagbtn:active{background:var(--surface-2)}
+.flagbtn.on{background:var(--warn);border-color:transparent;color:var(--accent-ink)}
 .room{font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1.15}
 .tank{margin-top:2px;font-size:17px;font-weight:600;color:var(--muted)}
 
@@ -107,6 +115,7 @@ button{font:inherit;color:inherit;margin:0;touch-action:manipulation;cursor:poin
 .btn-primary:active{background:var(--accent);filter:brightness(.94)}
 .btn-primary[disabled]{opacity:.45}
 .btn-quiet{background:transparent;box-shadow:none;border-color:transparent;color:var(--muted);font-size:17px;min-height:52px}
+.btn-lg{min-height:64px;font-size:20px}
 .btn-warn{color:var(--warn)}
 
 /* ---------- storage counters ---------- */
@@ -151,8 +160,8 @@ button{font:inherit;color:inherit;margin:0;touch-action:manipulation;cursor:poin
   padding:12px 14px;min-height:64px;margin-bottom:8px;box-shadow:var(--shadow);
 }
 .item:active{background:var(--surface-2)}
-.item .who{font-size:17px;font-weight:700;flex:1;min-width:0}
-.item .what{font-size:17px;font-weight:700;color:var(--accent);text-align:right;font-variant-numeric:tabular-nums}
+.item .who{font-size:17px;font-weight:700;flex:0 0 auto;max-width:55%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .what{font-size:17px;font-weight:700;color:var(--accent);text-align:right;font-variant-numeric:tabular-nums;flex:1 1 auto;min-width:0}
 .item .chev{color:var(--muted);display:flex;flex:none}
 .item .what.small{font-size:15px;font-weight:600}
 pre.msg{
@@ -161,6 +170,26 @@ pre.msg{
   white-space:pre-wrap;word-break:break-word;box-shadow:var(--shadow);
   -webkit-user-select:text;user-select:text;
 }
+
+/* ---------- sheets over the screen ---------- */
+.overlay{
+  position:fixed;inset:0;z-index:60;display:flex;justify-content:center;align-items:center;
+  background:rgba(6,10,16,.58);padding:16px;
+  padding-bottom:calc(16px + env(safe-area-inset-bottom));
+}
+.overlay.bottom{align-items:flex-end}
+.sheet{
+  width:100%;max-width:460px;background:var(--surface);border:1px solid var(--line);
+  border-radius:22px;padding:16px;display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow);
+}
+.sheet h2{margin:0;font-size:22px;font-weight:800;line-height:1.3}
+.sheet .where{margin:0 0 2px;font-size:15px;font-weight:600;color:var(--muted)}
+.cardrow{display:flex;align-items:center;gap:12px}
+.cardicon{
+  flex:none;width:44px;height:44px;border-radius:13px;background:var(--warn);
+  color:var(--accent-ink);display:flex;align-items:center;justify-content:center;
+}
+.item .flag{flex:none;display:flex;color:var(--warn)}
 
 /* ---------- toast ---------- */
 .toast{
@@ -205,7 +234,7 @@ pre.msg{
 
      type: "room"  one slider screen per tank, then a storage screen
                    if storage is true.
-     type: "ln2"   one 0 to 100 percent slider screen.
+     type: "ln"    one 0 to 100 percent slider screen.
      type: "ph"    the pH probe confirmation screen.
 
    For a room:
@@ -231,7 +260,6 @@ var CONFIG = {
 
   /* Shown on the opening screen. */
   appTitle: "Tank Check",
-  appSubtitle: "Walk the route, log every tank, copy the Slack update.",
 
   /* The walking route, in the order you physically walk it. */
   route: [
@@ -249,10 +277,10 @@ var CONFIG = {
     },
 
     {
-      type: "ln2",
+      type: "ln",
       name: "LN",          /* shown on the screen: LN (3325) */
       number: "3325",
-      title: "LN2",        /* the heading used in the Slack message */
+      title: "LN",         /* the heading used in the Slack message */
       min: 0,
       max: 100
     },
@@ -272,7 +300,7 @@ var CONFIG = {
       type: "room",
       name: "911 Room",
       number: "3346",
-      storage: true,
+      storage: false,
       tanks: [
         { label: "CO2 Tank 1", gas: "CO2", min: 0, max: 2000 },
         { label: "N2 Tank 1",  gas: "N2",  min: 0, max: 3000 }
@@ -300,8 +328,8 @@ var CONFIG = {
   /* How the sliders move. */
   psiStep: 50,       /* dragging snaps to this many psi */
   psiFineStep: 10,   /* the two small buttons under a psi slider */
-  pctStep: 1,        /* dragging the LN2 slider snaps to whole percents */
-  pctFineStep: 1,    /* the two small buttons under the LN2 slider */
+  pctStep: 1,        /* dragging the LN slider snaps to whole percents */
+  pctFineStep: 1,    /* the two small buttons under the LN slider */
 
   /* The four counters on every storage screen, in the order they are
      listed on screen and in the Slack message.
@@ -316,23 +344,54 @@ var CONFIG = {
     { key: "co2Empty", label: "CO2 empty", gas: "CO2", state: "empty" }
   ],
 
-  /* Wording for the pH probe screen and its line in the Slack message. */
+  /* The pH probe screen and its two outcomes. Whoever walks the route either
+     found the probe already calibrated, or calibrated it themselves today,
+     and the message says which. */
   ph: {
-    prompt: "Verify the pH probe is calibrated and stored correctly.",
-    okButton: "Calibrated and stored correctly",
-    okLine: "Calibrated and stored correctly :white_check_mark:",
-    attentionButton: "Needs attention",
-    attentionPrefix: "Needs attention: ",
-    attentionSuffix: " :warning:",
-    notePlaceholder: "What is wrong with it?"
+    prompt: "Verify the pH probe is calibrated and stored correctly. If it is not calibrated, calibrate it now.",
+    alreadyButton: "Already calibrated",
+    alreadyLine: "Calibrated and stored correctly",
+    recalButton: "I recalibrated it today",
+    recalLine: "Recalibrated today, stored correctly"
   },
 
-  /* The Slack message is NOT printed in walking order. You walk past LN2
-     second, but the message prints all the rooms first and LN2 near the end,
+  /* The attention flag: the warning button at the top right of every screen.
+     Anyone can tap it to mark something worth mentioning, with or without a
+     note. A flagged screen adds an ATTENTION line under its own room in the
+     message and puts a warning emoji beside that room's name.
+
+     The app also offers to raise a flag by itself when a reading looks bad.
+     {gas} in the wording below is replaced with N2, CO2 or LN. */
+  attention: {
+    homeHint: "Tap this at the top right of any screen to flag something that needs attention.",
+    sheetTitle: "Needs attention",
+    notePlaceholder: "Low tank, nothing left in storage, etc.",
+    linePrefix: "ATTENTION: ",     /* when a note was typed */
+    lineBare: "ATTENTION",         /* when it was flagged without a note */
+    roomEmoji: " :warning:",       /* added after the room name */
+
+    /* Offered after confirming a tank at or below its alert reading. */
+    emptyTankAsk: "Create an alert for empty {gas}?",
+    emptyTankNote: "Empty {gas}",
+
+    /* Offered after confirming a storage screen with no full cylinders of a
+       gas left, when at least one empty is sitting there. */
+    noFullAsk: "Create an alert for no full {gas} in storage?",
+    noFullNote: "No full {gas} in storage"
+  },
+
+  /* Confirming a tank at or below this reading offers an alert. 0 means only
+     a completely empty tank. One tank can override it with its own
+     alertAtOrBelow, so a single tank could warn at 200 psi while the rest
+     wait for 0. The LN screen uses it too, as a percentage. */
+  alertAtOrBelow: 0,
+
+  /* The Slack message is NOT printed in walking order. You walk past LN
+     second, but the message prints all the rooms first and LN near the end,
      the way the lab has always written it. This list sets the section order of
-     the message by stop type: every "room" first (in route order), then "ln2",
+     the message by stop type: every "room" first (in route order), then "ln",
      then "ph". Set it to [] to make the message follow the walk exactly. */
-  messageOrder: ["room", "ln2", "ph"],
+  messageOrder: ["room", "ln", "ph"],
 
   /* The first line of the Slack message. The date in M/D form is added. */
   messageTitle: "Tank Update",
@@ -382,7 +441,8 @@ var ICON = {
   plus:  svg('<path d="M12 5v14M5 12h14"/>', 26, 2.8),
   minus: svg('<path d="M5 12h14"/>', 26, 2.8),
   copy:  svg('<rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V5.5A1.5 1.5 0 0 1 6.5 4H15"/>', 24, 2.2),
-  warn:  svg('<path d="M12 8v5M12 17h.01"/><path d="M10.3 3.9L2.6 17.4A2 2 0 0 0 4.3 20.4h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>', 22, 2.2)
+  warn:  svg('<path d="M12 8v5M12 17h.01"/><path d="M10.3 3.9L2.6 17.4A2 2 0 0 0 4.3 20.4h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>', 24, 2.2),
+  warnSm: svg('<path d="M12 8v5M12 17h.01"/><path d="M10.3 3.9L2.6 17.4A2 2 0 0 0 4.3 20.4h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>', 19, 2.4)
 };
 function buzz(){
   if (!CONFIG.hapticMs) return;
@@ -438,13 +498,13 @@ function buildScreens(){
           sub: "Storage"
         });
       }
-    } else if (stop.type === "ln2"){
+    } else if (stop.type === "ln"){
       out.push({
-        kind: "ln2",
-        id: "ln2|" + pick(stop.number, stop.title),
+        kind: "ln",
+        id: "ln|" + pick(stop.number, stop.title),
         stopIndex: si,
         heading: stop.name + (stop.number ? " (" + stop.number + ")" : ""),
-        sub: pick(stop.title, "LN2") + " level",
+        sub: pick(stop.title, "LN") + " level",
         min: pick(stop.min, 0), max: pick(stop.max, 100),
         step: CONFIG.pctStep, fine: CONFIG.pctFineStep,
         unit: "%", start: stop.start
@@ -490,9 +550,9 @@ function emptyStorage(){
 function answerFor(screen){
   var a = state.answers[screen.id];
   if (a !== undefined && a !== null) return a;
-  if (screen.kind === "psi" || screen.kind === "ln2") return defaultValue(screen);
+  if (screen.kind === "psi" || screen.kind === "ln") return defaultValue(screen);
   if (screen.kind === "storage") return emptyStorage();
-  if (screen.kind === "ph") return { ok: true, note: "" };
+  if (screen.kind === "ph") return { state: "already" };
   return null;
 }
 
@@ -502,6 +562,7 @@ var state = {
   phase: "home",       /* home | check | review | output */
   index: 0,            /* which screen of SCREENS */
   answers: {},
+  flags: {},           /* screen id -> attention note, "" when none was typed */
   editing: false,      /* true when the screen was opened from the review list */
   original: null       /* value to restore if that edit is cancelled */
 };
@@ -528,7 +589,8 @@ function saveNow(){
       v: 1, sig: SIGNATURE, savedAt: Date.now(),
       phase: state.phase === "home" ? "check" : state.phase,
       index: state.index,
-      answers: state.answers
+      answers: state.answers,
+      flags: state.flags
     }));
   } catch(e){}
 }
@@ -550,6 +612,34 @@ function storageText(counts){
   });
   return parts.length ? parts.join(", ") : "none";
 }
+/* Which gases the storage counters cover, in the order they are listed. */
+function storageGases(){
+  var seen = [];
+  CONFIG.storageItems.forEach(function(it){
+    if (seen.indexOf(it.gas) < 0) seen.push(it.gas);
+  });
+  return seen;
+}
+/* Every attention note raised anywhere in one stop, in walking order. */
+function flagsForStop(si){
+  var out = [];
+  SCREENS.forEach(function(s){
+    if (s.stopIndex === si && state.flags[s.id] !== undefined) out.push(state.flags[s.id]);
+  });
+  return out;
+}
+function attentionLines(si){
+  return flagsForStop(si).map(function(note){
+    note = String(note || "").trim();
+    return note ? CONFIG.attention.linePrefix + note : CONFIG.attention.lineBare;
+  });
+}
+/* A section heading, with the warning emoji when anything in it was flagged. */
+function sectionHead(title, si){
+  return "*" + title + "*" + (flagsForStop(si).length ? CONFIG.attention.roomEmoji : "");
+}
+function phState(a){ return (a && a.state === "recal") ? "recal" : "already"; }
+
 function screenById(id){
   for (var i=0;i<SCREENS.length;i++) if (SCREENS[i].id === id) return SCREENS[i];
   return null;
@@ -575,7 +665,7 @@ function buildMessage(){
 
     if (stop.type === "room"){
       lines.push("");
-      lines.push("*" + stop.name + " (" + stop.number + ")*");
+      lines.push(sectionHead(stop.name + " (" + stop.number + ")", si));
       var running = mine.filter(function(s){ return s.kind === "psi"; }).map(function(s){
         var tank = stop.tanks[s.tankIndex];
         return tank.gas + " " + answerFor(s) + " psi";
@@ -585,20 +675,17 @@ function buildMessage(){
         var st = mine.filter(function(s){ return s.kind === "storage"; })[0];
         lines.push("Storage: " + storageText(st ? answerFor(st) : null));
       }
-    } else if (stop.type === "ln2"){
+    } else if (stop.type === "ln"){
       lines.push("");
-      lines.push("*" + pick(stop.title, "LN2") + "*");
+      lines.push(sectionHead(pick(stop.title, "LN"), si));
       lines.push("Level: " + answerFor(mine[0]) + "%");
     } else if (stop.type === "ph"){
       lines.push("");
-      lines.push("*" + pick(stop.title, "pH Probe") + "*");
-      var a = answerFor(mine[0]);
-      if (a && a.ok === false){
-        lines.push(CONFIG.ph.attentionPrefix + String(a.note || "").trim() + CONFIG.ph.attentionSuffix);
-      } else {
-        lines.push(CONFIG.ph.okLine);
-      }
+      lines.push(sectionHead(pick(stop.title, "pH Probe"), si));
+      lines.push(phState(answerFor(mine[0])) === "recal" ? CONFIG.ph.recalLine : CONFIG.ph.alreadyLine);
     }
+
+    attentionLines(si).forEach(function(l){ lines.push(l); });
   });
 
   return lines.join("\n");
@@ -738,11 +825,123 @@ function makeSlider(opts){
 }
 
 
+/* ---------- the attention flag ---------- */
+var overlay = null;
+function overlayKey(e){
+  if (e.key === "Escape" && overlay && overlay._cancel) overlay._cancel();
+}
+function closeOverlay(){
+  if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+  overlay = null;
+  document.removeEventListener("keydown", overlayKey);
+}
+function showOverlay(sheet, onCancel, atBottom){
+  closeOverlay();
+  overlay = h("div", { class:"overlay" + (atBottom ? " bottom" : "") }, sheet);
+  overlay._cancel = onCancel;
+  document.body.appendChild(overlay);
+  document.addEventListener("keydown", overlayKey);
+}
+
+/* The note sheet. prefill is the suggested text, or null to edit whatever is
+   already there. onClose runs instead of a plain re-render when this sheet is
+   part of a chain, so the chain can carry on. */
+function openFlagSheet(screen, prefill, onClose){
+  var existing = state.flags[screen.id];
+  var ta = h("textarea", {
+    class:"note", rows:"3", maxlength:"140",
+    placeholder: CONFIG.attention.notePlaceholder, "aria-label":"Note"
+  });
+  ta.value = (prefill === null || prefill === undefined)
+    ? (existing === undefined ? "" : existing)
+    : prefill;
+
+  function done(){
+    closeOverlay();
+    if (onClose) onClose(); else render();
+  }
+
+  showOverlay(h("div", { class:"sheet" }, [
+    h("h2", { text: CONFIG.attention.sheetTitle }),
+    h("p", { class:"where", text: screen.heading + " / " + screen.sub }),
+    ta,
+    h("button", { class:"btn btn-primary", type:"button", onclick: function(){
+      state.flags[screen.id] = ta.value.trim();
+      saveNow();
+      done();
+    }}, [h("span", { class:"chev", html: ICON.check }), h("span", { text:"Confirm" })]),
+    existing === undefined ? null :
+      h("button", { class:"btn btn-quiet btn-warn", type:"button", onclick: function(){
+        delete state.flags[screen.id];
+        saveNow();
+        done();
+      }}, "Remove flag"),
+    h("button", { class:"btn btn-quiet", type:"button", onclick: done }, "Cancel")
+  ]), done, false);
+
+  setTimeout(function(){ try { ta.focus(); } catch(e){} }, 60);
+}
+
+/* The short yes or no prompt the app raises by itself. */
+function askSheet(question, onYes, onSkip){
+  showOverlay(h("div", { class:"sheet" }, [
+    h("h2", { text: question }),
+    h("button", { class:"btn btn-primary", type:"button", onclick: function(){ closeOverlay(); onYes(); } },
+      [h("span", { class:"chev", html: ICON.warn }), h("span", { text:"Yes" })]),
+    h("button", { class:"btn btn-quiet", type:"button", onclick: function(){ closeOverlay(); onSkip(); } }, "Skip")
+  ]), function(){ closeOverlay(); onSkip(); }, true);
+}
+
+function fillGas(text, gas){ return String(text).replace("{gas}", gas); }
+
+/* Readings that are worth offering a flag for, checked when a screen is
+   confirmed. The app suggests, it never flags anything on its own, and it
+   asks whether or not the screen is already flagged. */
+function pendingAsks(screen){
+  var out = [];
+  var stop = CONFIG.route[screen.stopIndex];
+  var limit;
+
+  if (screen.kind === "psi"){
+    var tank = stop.tanks[screen.tankIndex];
+    limit = pick(tank.alertAtOrBelow, CONFIG.alertAtOrBelow);
+    if (typeof limit === "number" && answerFor(screen) <= limit){
+      out.push({ ask: fillGas(CONFIG.attention.emptyTankAsk, tank.gas),
+                 note: fillGas(CONFIG.attention.emptyTankNote, tank.gas) });
+    }
+  } else if (screen.kind === "ln"){
+    var name = pick(stop.title, "LN");
+    limit = pick(stop.alertAtOrBelow, CONFIG.alertAtOrBelow);
+    if (typeof limit === "number" && answerFor(screen) <= limit){
+      out.push({ ask: fillGas(CONFIG.attention.emptyTankAsk, name),
+                 note: fillGas(CONFIG.attention.emptyTankNote, name) });
+    }
+  } else if (screen.kind === "storage"){
+    var counts = answerFor(screen);
+    storageGases().forEach(function(gas){
+      var full = 0, empty = 0;
+      CONFIG.storageItems.forEach(function(it){
+        if (it.gas !== gas) return;
+        var n = (counts && counts[it.key]) || 0;
+        if (it.state === "full") full += n; else empty += n;
+      });
+      /* nothing full left, with empties sitting there to prove the slot is used */
+      if (full === 0 && empty > 0){
+        out.push({ ask: fillGas(CONFIG.attention.noFullAsk, gas),
+                   note: fillGas(CONFIG.attention.noFullNote, gas) });
+      }
+    });
+  }
+  return out;
+}
+
 /* ---------- navigation ---------- */
 function goHome(){ state.phase = "home"; render(); }
 function startFresh(){
+  closeOverlay();
   clearSaved();
   state.answers = {};
+  state.flags = {};
   state.index = 0;
   state.phase = "check";
   state.editing = false;
@@ -753,12 +952,26 @@ function resume(){
   var s = readSaved();
   if (!s){ startFresh(); return; }
   state.answers = s.answers || {};
+  state.flags = s.flags || {};
   state.index = Math.min(Math.max(0, s.index || 0), SCREENS.length-1);
   state.phase = (s.phase === "review" || s.phase === "output") ? s.phase : "check";
   state.editing = false;
   render();
 }
+/* Confirming a screen first offers any flags the readings suggest, one after
+   another, and only then moves on. */
 function confirmScreen(){
+  var screen = SCREENS[state.index];
+  runAsks(screen, pendingAsks(screen), 0);
+}
+function runAsks(screen, asks, i){
+  if (i >= asks.length){ advanceScreen(); return; }
+  var a = asks[i];
+  askSheet(a.ask,
+    function(){ openFlagSheet(screen, a.note, function(){ runAsks(screen, asks, i + 1); }); },
+    function(){ runAsks(screen, asks, i + 1); });
+}
+function advanceScreen(){
   if (state.editing){
     state.editing = false;
     state.original = null;
@@ -772,6 +985,7 @@ function confirmScreen(){
   render();
 }
 function goBack(){
+  closeOverlay();
   if (state.editing){
     var s = SCREENS[state.index];
     if (state.original === null || state.original === undefined) delete state.answers[s.id];
@@ -812,10 +1026,24 @@ function topBar(){
 function progressBar(done, total){
   return h("div", { class:"progress" }, h("i", { style:"width:" + Math.round((done/total)*100) + "%" }));
 }
+function flagButton(screen){
+  var on = state.flags[screen.id] !== undefined;
+  return h("button", {
+    class: "flagbtn" + (on ? " on" : ""),
+    type: "button",
+    "aria-pressed": on ? "true" : "false",
+    "aria-label": on ? "Edit what needs attention here" : "Flag something that needs attention",
+    html: ICON.warn,
+    onclick: function(){ openFlagSheet(screen, null, null); }
+  });
+}
 function titles(screen){
   return h("div", { class:"titles" }, [
-    h("div", { class:"room", text: screen.heading }),
-    h("div", { class:"tank", text: screen.sub })
+    h("div", { class:"titletext" }, [
+      h("div", { class:"room", text: screen.heading }),
+      h("div", { class:"tank", text: screen.sub })
+    ]),
+    flagButton(screen)
   ]);
 }
 function confirmButton(label){
@@ -890,75 +1118,39 @@ function screenStorage(screen){
 
   return h("div", { class:"screen" }, [
     titles(screen),
-    h("div", { class:"hint", text:"Cylinders in storage in this room. Leave every row at 0 if there are none." }),
+    h("div", { class:"hint", text:"Cylinders in storage for this room." }),
     h("div", { class:"scroll" }, rows),
     h("div", { class:"controls" }, [confirmButton()])
   ]);
 }
 
-var phNoteOpen = false;
 function screenPh(screen){
-  var a = answerFor(screen);
-  var body;
-
-  if (phNoteOpen){
-    var ta = h("textarea", {
-      class:"note", rows:"3", maxlength:"140",
-      placeholder: CONFIG.ph.notePlaceholder, "aria-label":"What needs attention"
-    });
-    ta.value = (a && a.note) || "";
-    var saveBtn = h("button", { class:"btn btn-primary", type:"button", onclick: function(){
-      var note = ta.value.trim();
-      if (!note){ toast("Add a short note first."); ta.focus(); return; }
-      state.answers[screen.id] = { ok:false, note:note };
-      phNoteOpen = false;
-      saveNow();
-      confirmScreen();
-    }}, [h("span", { class:"chev", html: ICON.check }), h("span", { text: state.editing ? "Save" : "Confirm" })]);
-    saveBtn.disabled = !((a && a.note) || "").trim();
-    ta.addEventListener("input", function(){ saveBtn.disabled = !ta.value.trim(); });
-
-    body = h("div", { class:"screen" }, [
-      titles(screen),
-      h("div", { class:"center" }, [
-        h("div", { class:"prompt", text:"What needs attention?" }),
-        ta
-      ]),
-      h("div", { class:"controls" }, [
-        saveBtn,
-        h("button", { class:"btn btn-quiet", type:"button", onclick: function(){ phNoteOpen = false; render(); } },
-          "Never mind, it is fine")
-      ])
-    ]);
-    setTimeout(function(){ try { ta.focus(); } catch(e){} }, 60);
-  } else {
-    body = h("div", { class:"screen" }, [
-      titles(screen),
-      h("div", { class:"center" }, [
-        h("div", { class:"prompt", text: CONFIG.ph.prompt })
-      ]),
-      h("div", { class:"controls" }, [
-        h("button", { class:"btn btn-primary", type:"button", onclick: function(){
-          state.answers[screen.id] = { ok:true, note:"" };
-          saveNow();
-          confirmScreen();
-        }}, [h("span", { class:"chev", html: ICON.check }), h("span", { text: CONFIG.ph.okButton })]),
-        h("button", { class:"btn btn-quiet btn-warn", type:"button", onclick: function(){ phNoteOpen = true; render(); } },
-          [h("span", { class:"chev", html: ICON.warn }), h("span", { text: CONFIG.ph.attentionButton })])
-      ])
-    ]);
+  function choose(kind){
+    state.answers[screen.id] = { state: kind };
+    saveNow();
+    confirmScreen();
   }
-  return body;
+  return h("div", { class:"screen" }, [
+    titles(screen),
+    h("div", { class:"center" }, [
+      h("div", { class:"prompt", text: CONFIG.ph.prompt })
+    ]),
+    h("div", { class:"controls" }, [
+      h("button", { class:"btn btn-primary", type:"button", onclick: function(){ choose("already"); } },
+        [h("span", { class:"chev", html: ICON.check }), h("span", { text: CONFIG.ph.alreadyButton })]),
+      h("button", { class:"btn btn-lg", type:"button", onclick: function(){ choose("recal"); } },
+        [h("span", { class:"chev", html: ICON.check }), h("span", { text: CONFIG.ph.recalButton })])
+    ])
+  ]);
 }
 
 function reviewValue(screen){
   var a = answerFor(screen);
   if (screen.kind === "psi")  return { text: a + " psi", small:false };
-  if (screen.kind === "ln2")  return { text: a + "%", small:false };
+  if (screen.kind === "ln")   return { text: a + "%", small:false };
   if (screen.kind === "storage") return { text: storageText(a), small:true };
   if (screen.kind === "ph"){
-    if (a && a.ok === false) return { text: "Needs attention", small:true };
-    return { text: "Calibrated", small:true };
+    return { text: phState(a) === "recal" ? "Recalibrated today" : "Calibrated", small:true };
   }
   return { text:"", small:true };
 }
@@ -972,6 +1164,7 @@ function screenReview(){
     }
     var v = reviewValue(s);
     list.appendChild(h("button", { class:"item", type:"button", onclick: function(){ editFromReview(i); } }, [
+      state.flags[s.id] === undefined ? null : h("div", { class:"flag", html: ICON.warnSm }),
       h("div", { class:"who", text: s.sub }),
       h("div", { class:"what" + (v.small ? " small" : ""), text: v.text }),
       h("div", { class:"chev", html: ICON.chev })
@@ -1011,7 +1204,7 @@ function screenOutput(){
       if (ok) toast("Copied. Paste it into Slack.");
       else toast("Copy blocked. Press and hold the message to select it.");
     });
-  }}, [h("span", { class:"chev", html: ICON.copy }), h("span", { text:"Copy to Slack" })]);
+  }}, [h("span", { class:"chev", html: ICON.copy }), h("span", { text:"Copy" })]);
 
   var newBtn = h("button", { class:"btn", type:"button" }, "Start new check");
   newBtn.addEventListener("click", function(){
@@ -1071,7 +1264,7 @@ function screenHome(){
 
   var stops = CONFIG.route.map(function(s){
     if (s.type === "room") return s.name;
-    if (s.type === "ln2") return pick(s.title, "LN2");
+    if (s.type === "ln") return pick(s.title, "LN");
     return pick(s.title, "pH probe");
   }).join(", ");
 
@@ -1079,13 +1272,16 @@ function screenHome(){
     h("div", { class:"screen" }, [
       h("div", { class:"scroll" }, h("div", null, [
         h("div", { class:"hero" }, [
-          h("h1", { text: CONFIG.appTitle }),
-          h("p", { text: CONFIG.appSubtitle })
+          h("h1", { text: CONFIG.appTitle })
         ]),
         h("div", { class:"pad" }, [
           h("div", { class:"card" }, [
             h("h2", { text: todayMD() + " round, " + SCREENS.length + " steps" }),
             h("p", { text: stops })
+          ]),
+          h("div", { class:"card cardrow" }, [
+            h("div", { class:"cardicon", html: ICON.warn }),
+            h("p", { text: CONFIG.attention.homeHint })
           ]),
           hasSaved ? h("div", { class:"card" }, [
             h("h2", { text: cardTitle }),
@@ -1145,10 +1341,9 @@ function render(){
     next = screenOutput();
   } else {
     var screen = SCREENS[state.index];
-    if (screen.kind !== "ph") phNoteOpen = false;
     var inner =
       screen.kind === "psi"     ? screenSlider(screen) :
-      screen.kind === "ln2"     ? screenSlider(screen) :
+      screen.kind === "ln"      ? screenSlider(screen) :
       screen.kind === "storage" ? screenStorage(screen) :
                                   screenPh(screen);
     next = h("div", { class:"app" }, [

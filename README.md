@@ -17,6 +17,33 @@ check back up where you left it.
 
 It then opens full screen with no browser chrome, like a normal app.
 
+## Flagging something that needs attention
+
+Every screen has a ⚠ button in the top right corner. Tap it to mark that the
+tank, the storage, the LN or the probe needs attention. You can type a short
+note or just confirm without one. A flagged screen adds a line under its own
+room in the message and puts a warning emoji beside the room name:
+
+```
+*Secondary (3326)* :warning:
+Running: N2 0 psi | CO2 850 psi | CO2 700 psi
+Storage: 1 N2 (empty), 2 CO2 (empty)
+ATTENTION: Empty N2
+ATTENTION: No full CO2 in storage
+```
+
+Flag it again to edit the note or remove the flag. Two flags in the same room
+give two lines, in the order you walked them.
+
+The app also offers a flag by itself when a reading looks bad. Confirm a tank
+at 0 psi and it asks *"Create an alert for empty CO2?"*. Say yes and the note
+sheet opens with **Empty CO2** already filled in, and you confirm it the same
+way as one you raised yourself. The same happens on a storage screen when a gas
+has no full cylinders left but empties are sitting there, and on the LN screen
+at 0 percent. The app only ever suggests, it never flags anything on its own,
+and it asks whether or not you already flagged that screen, so it never assumes
+you have covered it.
+
 ## The files
 
 | File | What it is |
@@ -33,8 +60,7 @@ the `<script>` block in `index.html`. Open the file, scroll to the big
 `END OF CONFIG`; nothing below it needs to change.
 
 `CONFIG.route` is the walk, top to bottom. **The order of this list is the order
-of the screens and the order of the sections in the Slack message.** To change
-the route, move the blocks up or down.
+of the screens.** To change the route, move the blocks up or down.
 
 ### Add a tank to a room
 
@@ -51,8 +77,11 @@ tanks: [
 - `label` is what the screen calls the tank.
 - `gas` is what the Slack message calls it, so `CO2 850 psi`.
 - `min` and `max` are the ends of the slider, in psi.
-- You can add `start: 600` to make the slider open at a particular value.
-  Without it, the slider opens halfway up.
+- `start: 600` makes the slider open at a particular value. Without it, the
+  slider opens halfway up.
+- `alertAtOrBelow: 200` makes that one tank offer an alert at 200 psi instead
+  of waiting for 0. See `CONFIG.alertAtOrBelow` for the setting every tank uses
+  by default.
 
 ### Remove a tank
 
@@ -80,11 +109,23 @@ Put it in the list where you actually walk past it.
 
 A room with `storage: true` gets a counting screen after its tanks, and a
 `Storage:` line in the message. A room with `storage: false` gets neither: no
-screen, and no Storage line at all.
+screen, and no Storage line at all. Right now only Secondary and Primary have
+storage.
 
 The message lists only the counts above zero, N2 before CO2 and full before
 empty, matching the order of `CONFIG.storageItems`. If every count is zero the
 line reads `Storage: none`.
+
+### The pH probe
+
+The last screen has two buttons, because the message says which one happened:
+
+| Button | Line in the message |
+| --- | --- |
+| Already calibrated | `Calibrated and stored correctly` |
+| I recalibrated it today | `Recalibrated today, stored correctly` |
+
+Both are under `CONFIG.ph`, along with the wording of the prompt.
 
 ### Other settings
 
@@ -92,9 +133,12 @@ line reads `Storage: none`.
 | --- | --- |
 | `psiStep` | How far a psi slider jumps as you drag it. Default 50. |
 | `psiFineStep` | The two small buttons under a psi slider. Default 10. |
-| `pctStep`, `pctFineStep` | The same two things for the LN2 percent slider. |
+| `pctStep`, `pctFineStep` | The same two things for the LN percent slider. |
+| `alertAtOrBelow` | A tank at or below this reading offers an alert when you confirm it. Default 0, meaning only a completely empty tank. |
 | `storageItems` | The four counter rows and how they are worded in the message. |
-| `ph` | The wording of the pH probe screen and its line in the message. |
+| `attention` | The wording of the flag sheet, the two automatic prompts, and the `ATTENTION` line. |
+| `ph` | The two pH probe buttons and their lines. |
+| `messageOrder` | The order of the sections in the message, which is not the order you walk them. Rooms first, then LN, then the probe. Set it to `[]` to make the message follow the walk. |
 | `messageTitle` | The first line of the message, before the date. |
 | `hapticMs` | Length of the buzz when a slider crosses a snap point. `0` turns it off. Android only; iPhone ignores it. |
 
@@ -135,16 +179,15 @@ Storage: 1 CO2 (empty)
 
 *911 Room (3346)*
 Running: CO2 1500 psi | N2 2400 psi
-Storage: none
 
 *iPSC Room (2308)*
 Running: CO2 750 psi | CO2 900 psi
 
-*LN2*
+*LN*
 Level: 27%
 
 *pH Probe*
-Calibrated and stored correctly :white_check_mark:
+Calibrated and stored correctly
 ```
 
 Single asterisks are Slack's bold, so the room names come out bold when pasted.
