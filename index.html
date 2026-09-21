@@ -414,6 +414,14 @@ var CONFIG = {
        "markup"  the old *asterisk* and :warning: style, for typing by hand. */
   copyStyle: "clean",
 
+  /* What a blank line is made of in the formatted copy. Slack throws away a
+     line with nothing in it when it reads a pasted message, so the gap
+     between sections has to contain something. This is a non breaking space,
+     which shows as an empty line. If the gaps ever collapse again, the next
+     things to try are "\u2003", an em space, or "\u200b", a zero width
+     space. */
+  blankLineChar: "\u00a0",
+
   /* Vibration in milliseconds when a slider crosses a snap point.
      Set to 0 to turn the haptic tick off. Android only, iOS ignores it. */
   hapticMs: 8
@@ -742,21 +750,21 @@ function escapeHtml(str){
 
 /* The formatted version that goes on the clipboard beside the plain one.
 
-   Every line is its own <div> and the empty ones hold a non breaking space.
-   Both of those matter. Slack reads pasted HTML into its own format one block
-   at a time, so separate blocks are what keep the lines apart, and a run of
-   <br> tags gets collapsed to a single break, which silently ate the gaps
-   between sections. A line holding a non breaking space is a line with
-   something in it, so there is nothing left to collapse.
+   Flat <br> separated lines, deliberately. Wrapping each line in its own
+   <div> reads correctly in a browser but Slack mishandles the nesting on the
+   way in and lets the first heading's bold run through the rest of the
+   message. Plain <br> keeps the bold on the headings where it belongs.
 
-   No <pre> and no <p>: the first reads as a code block in some chat apps, the
-   second brings its own margins. */
+   A truly empty line between sections is dropped, so a blank line carries a
+   non breaking space instead. See CONFIG.blankLineChar.
+
+   No <pre> either: some chat apps read it as a code block. */
 function messageHtml(lines){
   return lines.map(function(l){
-    if (l.blank) return "<div>&nbsp;</div>";
-    if (l.head) return "<div><b>" + escapeHtml(l.text) + "</b>" + (l.warn ? CONFIG.attention.roomMark : "") + "</div>";
-    return "<div>" + escapeHtml(l.text) + "</div>";
-  }).join("");
+    if (l.blank) return CONFIG.blankLineChar;
+    if (l.head) return "<b>" + escapeHtml(l.text) + "</b>" + (l.warn ? CONFIG.attention.roomMark : "");
+    return escapeHtml(l.text);
+  }).join("<br>");
 }
 
 /* The plain text version, which is also what the tests read. */
