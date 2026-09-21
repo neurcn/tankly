@@ -87,6 +87,7 @@ and stays searchable.
 | `index.html` | The whole app. HTML, CSS and JavaScript in one file, no build step, no dependencies. |
 | `manifest.webmanifest` | Makes it installable to a phone home screen. |
 | `icon.svg`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` | The home screen icon. |
+| `make-icons.py` | Redraws the three PNG icons. Only needed if you want to change how the icon looks: `python3 make-icons.py`, no dependencies. Keep it in step with `icon.svg`, which is the same drawing by hand. |
 
 ## Changing the rooms, tanks or route
 
