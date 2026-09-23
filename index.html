@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Tank Check</title>
-<meta name="description" content="Walk the lab gas tank route, log every reading, copy a ready to paste Slack update.">
+<title>Tankly</title>
+<meta name="description" content="Walk the lab gas tank rounds, log every reading, copy a ready to paste Slack update.">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#eaeef4" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0a0f15" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Tank Check">
+<meta name="apple-mobile-web-app-title" content="Tankly">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -68,8 +68,26 @@ button{font:inherit;color:inherit;margin:0;touch-action:manipulation;cursor:poin
 /* ---------- screen shell ---------- */
 .screen{flex:1;display:flex;flex-direction:column;min-height:0}
 .scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
-.titles{flex:none;display:flex;align-items:flex-start;gap:8px;padding:2px 14px 6px 18px}
-.titletext{flex:1;min-width:0}
+.titles{flex:none;display:flex;align-items:flex-start;gap:8px;padding:6px 14px 6px 18px}
+.prompt-text{flex:1;min-width:0;font-size:21px;font-weight:700;line-height:1.28;letter-spacing:-.01em}
+.prompt-text u{text-underline-offset:3px;text-decoration-thickness:2px}
+.infobtn{
+  flex:none;width:48px;height:48px;border-radius:14px;
+  border:1px solid var(--line);background:var(--surface);color:var(--accent);
+  display:inline-flex;align-items:center;justify-content:center;box-shadow:var(--shadow);
+}
+.infobtn:active{background:var(--surface-2)}
+.infobtn.on{background:var(--accent);border-color:transparent;color:var(--accent-ink)}
+.bubblewrap{flex:none;position:relative;padding:0 18px 4px}
+.bubbletip{
+  position:absolute;right:88px;top:-5px;width:11px;height:11px;background:var(--surface);
+  border-left:1px solid var(--accent);border-top:1px solid var(--accent);transform:rotate(45deg);
+}
+.bubble{
+  background:var(--surface);border:1px solid var(--accent);border-radius:14px;
+  padding:11px 13px;font-size:15.5px;line-height:1.45;color:var(--text);box-shadow:var(--shadow);
+}
+.bubble u{text-underline-offset:3px;text-decoration-thickness:2px}
 .flagbtn{
   flex:none;width:48px;height:48px;border-radius:14px;
   border:1px solid var(--line);background:var(--surface);color:var(--muted);
@@ -77,8 +95,38 @@ button{font:inherit;color:inherit;margin:0;touch-action:manipulation;cursor:poin
 }
 .flagbtn:active{background:var(--surface-2)}
 .flagbtn.on{background:var(--warn);border-color:transparent;color:var(--accent-ink)}
-.room{font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1.15}
-.tank{margin-top:2px;font-size:17px;font-weight:600;color:var(--muted)}
+/* ---------- the room menu ---------- */
+.menuhead{flex:none;display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:12px 18px 0}
+.menuhead h1{margin:0;font-size:30px;font-weight:800;letter-spacing:-.03em}
+.menumeta{font-size:13px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.menuhint{flex:none;padding:4px 18px 10px;font-size:15px;color:var(--muted)}
+.menu{
+  flex:1;min-height:0;display:grid;padding:0 14px;gap:10px;
+  grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));
+}
+.tile{
+  position:relative;background:var(--surface);border:1px solid var(--line);border-radius:18px;
+  box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:1px;padding:8px 4px;overflow:hidden;
+}
+.tile:active{background:var(--surface-2);transform:translateY(1px)}
+.tile.done{border-color:var(--ok)}
+.tilename{font-size:19px;font-weight:800;letter-spacing:-.02em;line-height:1.1;text-align:center}
+.tilenum{margin-top:2px;font-size:13px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
+.tilestats{margin-top:9px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.tilestats div{font-size:14.5px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+.tilefloor{
+  margin-top:10px;font-size:12px;font-weight:800;color:var(--accent);
+  border:1px solid var(--accent);border-radius:999px;padding:1px 8px;white-space:nowrap;
+}
+.tickbadge{
+  position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;
+  background:var(--ok);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;
+}
+.tickbadge svg{width:14px;height:14px}
+.btn-blocked{background:var(--surface);color:var(--muted);border-style:dashed;flex-direction:column;gap:1px}
+.btn-blocked .leftnote{font-size:13px;font-weight:600;color:var(--muted)}
+.btn-quiet.on{color:var(--ok)}
 
 /* ---------- readout ---------- */
 .readout{flex:none;display:flex;align-items:baseline;justify-content:center;gap:8px;padding:4px 0 6px}
@@ -205,8 +253,9 @@ button{font:inherit;color:inherit;margin:0;touch-action:manipulation;cursor:poin
 /* ---------- short screens (landscape) ---------- */
 @media (max-height:600px){
   .readout .num{font-size:46px}
-  .room{font-size:21px}
-  .tank{font-size:15px}
+  .prompt-text{font-size:17px}
+  .menuhead h1{font-size:24px}
+  .tilename{font-size:15px}
   .sliderwrap{min-height:76px}
   .btn{min-height:50px}
   .btn-primary{min-height:54px;font-size:18px}
@@ -259,78 +308,139 @@ button{font:inherit;color:inherit;margin:0;touch-action:manipulation;cursor:poin
 
 var CONFIG = {
 
-  /* Shown on the opening screen. */
-  appTitle: "Tank Check",
+  /* The name of the app, shown on the menu, in the browser tab, and on the
+     last line of the Slack message. */
+  appTitle: "Tankly",
+  appUrl: "https://neurcn.github.io/tankly/",
 
-  /* The walking route, in the order you physically walk it. */
+  /* The line under the title on the room menu. */
+  menuHint: "Tap a room to check.",
+
+  /* The last two lines of the Slack message. The link goes on its own line
+     because a pasted message cannot turn a single word into a link. */
+  footerText: "Streamlined with Tankly",
+
+  /* ============================ THE ROOMS ============================
+     The ORDER OF THIS LIST is the order the rooms appear in the Slack
+     message. It is NOT the order of the buttons on the menu: that is the
+     "menu" number on each room, 1 to 6, counted left to right along the top
+     row and then the bottom row.
+
+     Three kinds of stop:
+       type: "room"  one psi screen per tank, then a cylinder counting
+                     screen if storage is true
+       type: "ln"    one 0 to 100 percent screen
+       type: "ph"    the pH probe screens
+
+     On a room:
+       name     what the Slack message calls it
+       tile     the short name on the menu button
+       number   room number, shown on the button and in the message
+       menu     which of the six buttons it is, 1 to 6
+       floor    OPTIONAL badge on the button, for a room on another floor
+       storage  true adds the counting screen and a Storage line
+
+     On a tank:
+       label    keeps this tank's reading apart from the others. Changing it
+                is what tells the app it is a different tank.
+       gas      what the Slack message calls it, N2 or CO2. Also decides
+                which count it adds to on the menu button.
+       min/max  the ends of the slider, in psi
+       prompt   the sentence at the top of its screen
+       info     OPTIONAL note behind the circled i. Without one here and
+                without a match in infoByGas below, the i does not appear.
+       start    OPTIONAL starting value; without it the slider opens halfway
+       alertAtOrBelow  OPTIONAL, overrides the app wide setting further down
+     =================================================================== */
   route: [
 
     {
-      type: "room",
-      name: "Secondary",
-      number: "3326",
-      storage: true,
+      type: "room", name: "Secondary", tile: "Secondary", number: "3326",
+      menu: 2, storage: true,
       tanks: [
-        { label: "N2 Tank 1",  gas: "N2",  min: 0, max: 3000 },
-        { label: "CO2 Tank 1", gas: "CO2", min: 0, max: 1200 },
-        { label: "CO2 Tank 2", gas: "CO2", min: 0, max: 1200 }
+        { label: "N2 Tank 1",  gas: "N2",  min: 0, max: 3000,
+          prompt: "Record the psi for the N₂ tank." },
+        { label: "CO2 Tank 1", gas: "CO2", min: 0, max: 1200,
+          prompt: "Record the psi for CO₂ Tank 1." },
+        { label: "CO2 Tank 2", gas: "CO2", min: 0, max: 1200,
+          prompt: "Record the psi for CO₂ Tank 2." }
       ]
     },
 
     {
-      type: "ln",
-      name: "LN",          /* shown on the screen: LN (3325) */
-      number: "3325",
-      title: "LN",         /* the heading used in the Slack message */
-      min: 0,
-      max: 100
-    },
-
-    {
-      type: "room",
-      name: "Primary",
-      number: "3343",
-      storage: true,
-      tanks: [
-        { label: "CO2 Tank 1", gas: "CO2", min: 0, max: 1200 },
-        { label: "CO2 Tank 2", gas: "CO2", min: 0, max: 1200 }
+      type: "ln", name: "LN", tile: "LN", number: "3325", title: "LN",
+      menu: 5, min: 0, max: 100,
+      prompt: "Record the LN level.",
+      /* Bands are read top to bottom and the first one the reading falls
+         into is the one offered. Put the most serious one first. */
+      alerts: [
+        { atOrBelow: 0,  ask: "Create an alert for empty LN?", note: "Empty LN" },
+        { atOrBelow: 9,  ask: "Create an alert for low LN?",   note: "LN <10%" },
+        { atOrBelow: 10, ask: "Create an alert for low LN?",   note: "LN at 10%" }
       ]
     },
 
     {
-      type: "room",
-      name: "911 Room",
-      number: "3346",
-      storage: false,
+      type: "room", name: "Primary", tile: "Primary", number: "3343",
+      menu: 4, storage: true,
       tanks: [
-        { label: "CO2 Tank 1", gas: "CO2", min: 0, max: 2000 },
-        { label: "N2 Tank 1",  gas: "N2",  min: 0, max: 3000 }
+        { label: "CO2 Tank 1", gas: "CO2", min: 0, max: 1200,
+          prompt: "Record the psi for CO₂ Tank 1." },
+        { label: "CO2 Tank 2", gas: "CO2", min: 0, max: 1200,
+          prompt: "Record the psi for CO₂ Tank 2." }
       ]
     },
 
     {
-      type: "room",
-      name: "iPSC Room",
-      number: "2308",
-      storage: false,
+      type: "room", name: "911 Room", tile: "911", number: "3346",
+      menu: 1, storage: false,
       tanks: [
-        { label: "CO2 Tank 1", gas: "CO2", min: 0, max: 1200 },
-        { label: "CO2 Tank 2", gas: "CO2", min: 0, max: 1200 }
+        { label: "CO2 Tank 1", gas: "CO2", min: 0, max: 2000,
+          prompt: "Record the psi for the CO₂ tank." },
+        { label: "N2 Tank 1",  gas: "N2",  min: 0, max: 3000,
+          prompt: "Record the psi for the N₂ tank." }
       ]
     },
 
     {
-      type: "ph",
-      title: "pH Probe"    /* the heading used in the Slack message */
+      type: "room", name: "iPSC Room", tile: "iPSC", number: "2308",
+      menu: 3, storage: false, floor: "Floor 2",
+      tanks: [
+        { label: "CO2 Tank 1", gas: "CO2", min: 0, max: 1200,
+          prompt: "Record the psi for CO₂ Tank 1." },
+        { label: "CO2 Tank 2", gas: "CO2", min: 0, max: 1200,
+          prompt: "Record the psi for CO₂ Tank 2." }
+      ]
+    },
+
+    {
+      type: "ph", name: "pH Probe", tile: "pH", number: "3319",
+      title: "pH Probe", menu: 6
     }
 
   ],
 
-  /* How the sliders move. */
+  /* Shown behind the circled i on every tank of that gas, unless that tank
+     carries its own info. Text between _underscores_ comes out underlined. */
+  infoByGas: {
+    N2: "If the psi reads 0, briefly open the _top_ valve, record the psi, then re-tighten the valve."
+  },
+
+  /* The counts on a menu button, in the order they are listed. A room with
+     none of a gas simply does not show that line, and a stop that is not a
+     room shows none of them. */
+  tileGases: [
+    { gas: "CO2", label: "CO₂" },
+    { gas: "N2",  label: "N₂"  }
+  ],
+
   psiStep: 50,       /* dragging snaps to this many psi */
   psiFineStep: 10,   /* the two small buttons under a psi slider */
   pctStep: 1,        /* dragging the LN slider snaps to whole percents */
   pctFineStep: 1,    /* the two small buttons under the LN slider */
+
+  /* The sentence at the top of a cylinder counting screen. */
+  storagePrompt: "Cylinders in storage for this room.",
 
   /* The four counters on every storage screen, in the order they are
      listed on screen and in the Slack message.
@@ -345,15 +455,27 @@ var CONFIG = {
     { key: "co2Empty", label: "CO2 empty", gas: "CO2", state: "empty" }
   ],
 
-  /* The pH probe screen and its two outcomes. Whoever walks the route either
-     found the probe already calibrated, or calibrated it themselves today,
-     and the message says which. */
+  /* The pH probe.
+
+     Calibration is a weekly job, not a daily one. The first time the probe
+     room is opened in a given week, the app asks whoever is there to check
+     the calibration, and either answer settles it for the week. Every visit
+     after that, the only question is whether the probe is stored correctly.
+
+     The week runs Monday to Sunday and is remembered on that phone alone.
+     Somebody on a different phone is asked to CHECK the calibration, which
+     takes a moment and is never a question about what anyone else did. */
   ph: {
-    prompt: "Verify the pH probe is calibrated and stored correctly. If it is not calibrated, calibrate it now.",
-    alreadyButton: "Already calibrated",
-    alreadyLine: "Calibrated and stored correctly",
-    recalButton: "I recalibrated it today",
-    recalLine: "Recalibrated today, stored correctly"
+    calPrompt: "Check the probe's calibration. If it is not calibrated, calibrate it now.",
+    calInfo: "",                      /* text here puts a circled i on the screen */
+    alreadyButton: "It was already calibrated",
+    recalButton: "I calibrated it today",
+    storePrompt: "Is the pH probe stored correctly?",
+    storeButton: "Stored correctly",
+    recalLater: "I recalibrated it today",
+    alreadyLine: "Calibration checked and good, stored correctly",
+    recalLine: "Recalibrated today, stored correctly",
+    storeOnlyLine: "Stored correctly"
   },
 
   /* The attention flag: the warning button at the top right of every screen.
@@ -388,15 +510,14 @@ var CONFIG = {
 
   /* Confirming a tank at or below this reading offers an alert. 0 means only
      a completely empty tank. One tank can override it with its own
-     alertAtOrBelow, so a single tank could warn at 200 psi while the rest
-     wait for 0. The LN screen uses it too, as a percentage. */
+     alertAtOrBelow, and a stop can replace it outright with alert bands, the
+     way LN does above. */
   alertAtOrBelow: 0,
 
-  /* The Slack message is NOT printed in walking order. You walk past LN
-     second, but the message prints all the rooms first and LN near the end,
-     the way the lab has always written it. This list sets the section order of
-     the message by stop type: every "room" first (in route order), then "ln",
-     then "ph". Set it to [] to make the message follow the walk exactly. */
+  /* The Slack message is NOT printed in menu order. This list sets the
+     section order by stop type: every "room" first, in the order of the
+     route above, then "ln", then "ph". Set it to [] to print them in plain
+     route order. */
   messageOrder: ["room", "ln", "ph"],
 
   /* The first line of the Slack message. The date in M/D form is added. */
@@ -426,7 +547,7 @@ var CONFIG = {
      away when Slack reads a pasted message, so the gap between sections has
      to hold something. Plain text needs none of this: a real empty line
      comes through untouched. */
-  blankLineChar: "\u00a0",
+  blankLineChar: " ",
 
   /* Vibration in milliseconds when a slider crosses a snap point.
      Set to 0 to turn the haptic tick off. Android only, iOS ignores it. */
@@ -437,7 +558,8 @@ var CONFIG = {
 
 
 /* ---------- tiny helpers ---------- */
-var STORE_KEY = "tankcheck.session.v1";
+var STORE_KEY = "tankly.session.v1";
+var PH_KEY = "tankly.ph.v1";
 
 function h(tag, attrs, kids){
   var n = document.createElement(tag), k, v;
@@ -473,6 +595,7 @@ var ICON = {
   plus:  svg('<path d="M12 5v14M5 12h14"/>', 26, 2.8),
   minus: svg('<path d="M5 12h14"/>', 26, 2.8),
   copy:  svg('<rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V5.5A1.5 1.5 0 0 1 6.5 4H15"/>', 24, 2.2),
+  info:  svg('<circle cx="12" cy="12" r="9"/><path d="M12 11.2v5"/><path d="M12 7.7h.01"/>', 24, 2.2),
   warn:  svg('<path d="M12 8v5M12 17h.01"/><path d="M10.3 3.9L2.6 17.4A2 2 0 0 0 4.3 20.4h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>', 24, 2.2),
   warnSm: svg('<path d="M12 8v5M12 17h.01"/><path d="M10.3 3.9L2.6 17.4A2 2 0 0 0 4.3 20.4h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>', 19, 2.4)
 };
@@ -504,64 +627,121 @@ function relTime(ts){
 }
 
 
-/* ---------- build the list of screens from CONFIG ---------- */
-function buildScreens(){
+/* ---------- the screens each stop is made of ---------- */
+
+/* Every screen a stop can have, whether or not it is asked for today. Ids
+   come from here, so a flag or a reading keeps its place even on a day the
+   screen is not walked. */
+function screensForStop(si){
+  var stop = CONFIG.route[si];
   var out = [];
-  CONFIG.route.forEach(function(stop, si){
-    if (stop.type === "room"){
-      (stop.tanks || []).forEach(function(tank, ti){
-        out.push({
-          kind: "psi",
-          id: "psi|" + stop.number + "|" + tank.label,
-          stopIndex: si, tankIndex: ti,
-          heading: stop.name + " (" + stop.number + ")",
-          sub: tank.label,
-          min: pick(tank.min, 0), max: pick(tank.max, 3000),
-          step: CONFIG.psiStep, fine: CONFIG.psiFineStep,
-          unit: "psi", start: tank.start
-        });
-      });
-      if (stop.storage){
-        out.push({
-          kind: "storage",
-          id: "storage|" + stop.number,
-          stopIndex: si,
-          heading: stop.name + " (" + stop.number + ")",
-          sub: "Storage"
-        });
-      }
-    } else if (stop.type === "ln"){
+
+  if (stop.type === "room"){
+    (stop.tanks || []).forEach(function(tank, ti){
       out.push({
-        kind: "ln",
-        id: "ln|" + pick(stop.number, stop.title),
-        stopIndex: si,
-        heading: stop.name + (stop.number ? " (" + stop.number + ")" : ""),
-        sub: pick(stop.title, "LN") + " level",
-        min: pick(stop.min, 0), max: pick(stop.max, 100),
-        step: CONFIG.pctStep, fine: CONFIG.pctFineStep,
-        unit: "%", start: stop.start
+        kind: "psi",
+        id: "psi|" + stop.number + "|" + tank.label,
+        stopIndex: si, tankIndex: ti,
+        prompt: tank.prompt || ("Record the psi for " + tank.label + "."),
+        info: pick(tank.info, (CONFIG.infoByGas || {})[tank.gas]),
+        label: tank.label,
+        min: pick(tank.min, 0), max: pick(tank.max, 3000),
+        step: CONFIG.psiStep, fine: CONFIG.psiFineStep,
+        unit: "psi", start: tank.start
       });
-    } else if (stop.type === "ph"){
+    });
+    if (stop.storage){
       out.push({
-        kind: "ph",
-        id: "ph|" + si,
-        stopIndex: si,
-        heading: pick(stop.title, "pH Probe"),
-        sub: "Last stop"
+        kind: "storage", id: "storage|" + stop.number, stopIndex: si,
+        prompt: CONFIG.storagePrompt, label: "Storage"
       });
     }
+
+  } else if (stop.type === "ln"){
+    out.push({
+      kind: "ln", id: "ln|" + pick(stop.number, stop.title), stopIndex: si,
+      prompt: stop.prompt || "Record the level.",
+      label: pick(stop.title, "LN") + " level",
+      min: pick(stop.min, 0), max: pick(stop.max, 100),
+      step: CONFIG.pctStep, fine: CONFIG.pctFineStep,
+      unit: "%", start: stop.start
+    });
+
+  } else if (stop.type === "ph"){
+    out.push({
+      kind: "phcal", id: "ph|cal", stopIndex: si,
+      prompt: CONFIG.ph.calPrompt, info: CONFIG.ph.calInfo || null,
+      label: "Calibration"
+    });
+    out.push({
+      kind: "phstore", id: "ph|store", stopIndex: si,
+      prompt: CONFIG.ph.storePrompt, label: "Storage"
+    });
+  }
+  return out;
+}
+
+/* What you actually walk today. The only thing this drops is the pH
+   calibration screen once the week's calibration has been settled. */
+function visitScreens(si){
+  return screensForStop(si).filter(function(s){
+    return !(s.kind === "phcal" && phWeekDone());
+  });
+}
+
+function allScreens(){
+  var out = [];
+  CONFIG.route.forEach(function(stop, si){ out = out.concat(screensForStop(si)); });
+  return out;
+}
+
+/* The six buttons, left to right along the top row and then the bottom. */
+function menuStops(){
+  return CONFIG.route.map(function(stop, si){ return { stop: stop, si: si }; })
+    .sort(function(a, b){
+      return pick(a.stop.menu, a.si + 1) - pick(b.stop.menu, b.si + 1);
+    });
+}
+
+/* A room is checked off when every screen of today's visit is confirmed. */
+function stopDone(si){
+  var scr = visitScreens(si);
+  if (!scr.length) return false;
+  for (var i = 0; i < scr.length; i++) if (!state.done[scr[i].id]) return false;
+  return true;
+}
+function doneCount(){
+  var n = 0;
+  CONFIG.route.forEach(function(stop, si){ if (stopDone(si)) n++; });
+  return n;
+}
+function roomsLeft(){ return CONFIG.route.length - doneCount(); }
+
+/* The CO2 and N2 counts under a room's name on the menu. Running tanks
+   only: cylinders in storage are not counted here. */
+function tileStats(stop){
+  if (stop.type !== "room") return [];
+  var out = [];
+  (CONFIG.tileGases || []).forEach(function(g){
+    var n = 0;
+    (stop.tanks || []).forEach(function(t){ if (t.gas === g.gas) n++; });
+    if (n > 0) out.push(g.label + " " + n);
   });
   return out;
 }
-var SCREENS = buildScreens();
 
 /* A fingerprint of the route. If CONFIG changes, an old saved session is
    thrown away instead of being restored onto the wrong screens. */
 var SIGNATURE = (function(){
-  var s = SCREENS.map(function(x){ return x.id + ":" + pick(x.min,"") + "-" + pick(x.max,""); }).join("|");
-  var hash = 5381;
-  for (var i=0;i<s.length;i++){ hash = ((hash*33) ^ s.charCodeAt(i)) >>> 0; }
-  return hash.toString(36) + "." + SCREENS.length;
+  var parts = [];
+  CONFIG.route.forEach(function(stop){
+    parts.push(stop.type + ":" + stop.name + ":" + pick(stop.number, ""));
+    (stop.tanks || []).forEach(function(t){ parts.push(t.label + ":" + t.min + "-" + t.max); });
+    if (stop.storage) parts.push("storage");
+  });
+  var s = parts.join("|"), hash = 5381;
+  for (var i = 0; i < s.length; i++) hash = ((hash * 33) ^ s.charCodeAt(i)) >>> 0;
+  return hash.toString(36) + "." + CONFIG.route.length;
 })();
 
 function snapTo(v, step, min, max){
@@ -584,28 +764,62 @@ function answerFor(screen){
   if (a !== undefined && a !== null) return a;
   if (screen.kind === "psi" || screen.kind === "ln") return defaultValue(screen);
   if (screen.kind === "storage") return emptyStorage();
-  if (screen.kind === "ph") return { state: "already" };
+  if (screen.kind === "phcal") return { outcome: "already" };
+  if (screen.kind === "phstore") return { ok: true };
   return null;
 }
 
 
 /* ---------- state and persistence ---------- */
 var state = {
-  phase: "home",       /* home | check | review | output */
-  index: 0,            /* which screen of SCREENS */
+  phase: "home",       /* home | menu | room | review | output */
+  stopIndex: 0,        /* which room is open */
+  screenIndex: 0,      /* which screen inside that room */
   answers: {},
   flags: {},           /* screen id -> attention note, "" when none was typed */
-  editing: false,      /* true when the screen was opened from the review list */
-  original: null       /* value to restore if that edit is cancelled */
+  done: {},            /* screen id -> true once confirmed */
+  returnToReview: false,
+  original: null       /* value to restore if an edit from review is cancelled */
 };
 var saved = null;      /* a restorable session found in localStorage */
+
+function pad2(n){ return (n < 10 ? "0" : "") + n; }
+function dayKey(d){
+  d = d || new Date();
+  return d.getFullYear() + "-" + pad2(d.getMonth()+1) + "-" + pad2(d.getDate());
+}
+/* Weeks run Monday to Sunday, named after their Monday. */
+function weekKey(d){
+  d = d || new Date();
+  var back = (d.getDay() === 0) ? 6 : d.getDay() - 1;
+  return dayKey(new Date(d.getFullYear(), d.getMonth(), d.getDate() - back));
+}
+
+/* The pH calibration is weekly, so it is kept apart from the check itself,
+   which is thrown away nightly. */
+function phWeekDone(){
+  try {
+    var o = JSON.parse(localStorage.getItem(PH_KEY) || "null");
+    return (o && o.week === weekKey()) ? o : null;
+  } catch(e){ return null; }
+}
+function setPhWeekDone(outcome){
+  try {
+    localStorage.setItem(PH_KEY, JSON.stringify({ week: weekKey(), outcome: outcome }));
+  } catch(e){}
+}
 
 function readSaved(){
   try {
     var raw = localStorage.getItem(STORE_KEY);
     if (!raw) return null;
     var o = JSON.parse(raw);
-    if (!o || o.sig !== SIGNATURE) { localStorage.removeItem(STORE_KEY); return null; }
+    /* A check belongs to the day it was walked. Yesterday's is not offered
+       back, so a new day always starts clean. */
+    if (!o || o.sig !== SIGNATURE || o.day !== dayKey()){
+      localStorage.removeItem(STORE_KEY);
+      return null;
+    }
     return o;
   } catch(e){ return null; }
 }
@@ -618,11 +832,11 @@ function saveNow(){
   clearTimeout(saveTimer);
   try {
     localStorage.setItem(STORE_KEY, JSON.stringify({
-      v: 1, sig: SIGNATURE, savedAt: Date.now(),
-      phase: state.phase === "home" ? "check" : state.phase,
-      index: state.index,
+      v: 2, sig: SIGNATURE, day: dayKey(), savedAt: Date.now(),
+      phase: (state.phase === "review" || state.phase === "output") ? state.phase : "menu",
       answers: state.answers,
-      flags: state.flags
+      flags: state.flags,
+      done: state.done
     }));
   } catch(e){}
 }
@@ -655,8 +869,8 @@ function storageGases(){
 /* Every attention note raised anywhere in one stop, in walking order. */
 function flagsForStop(si){
   var out = [];
-  SCREENS.forEach(function(s){
-    if (s.stopIndex === si && state.flags[s.id] !== undefined) out.push(state.flags[s.id]);
+  screensForStop(si).forEach(function(s){
+    if (state.flags[s.id] !== undefined) out.push(state.flags[s.id]);
   });
   return out;
 }
@@ -666,10 +880,9 @@ function attentionLines(si){
     return note ? CONFIG.attention.linePrefix + note : CONFIG.attention.lineBare;
   });
 }
-function phState(a){ return (a && a.state === "recal") ? "recal" : "already"; }
-
 function screenById(id){
-  for (var i=0;i<SCREENS.length;i++) if (SCREENS[i].id === id) return SCREENS[i];
+  var all = allScreens();
+  for (var i = 0; i < all.length; i++) if (all[i].id === id) return all[i];
   return null;
 }
 /* The route in the order the message prints it, which is not the order you
@@ -695,7 +908,7 @@ function buildMessageLines(){
 
   messageStops().forEach(function(entry){
     var stop = entry.stop, si = entry.si;
-    var mine = SCREENS.filter(function(s){ return s.stopIndex === si; });
+    var mine = visitScreens(si);
     var warn = flagsForStop(si).length > 0;
 
     if (stop.type === "room"){
@@ -717,11 +930,24 @@ function buildMessageLines(){
     } else if (stop.type === "ph"){
       lines.push({ blank:true });
       lines.push({ head:true, text: pick(stop.title, "pH Probe"), warn: warn });
-      lines.push({ text: phState(answerFor(mine[0])) === "recal" ? CONFIG.ph.recalLine : CONFIG.ph.alreadyLine });
+      /* What this visit did. On a week somebody already settled, all this
+         person did was check how the probe is stored, so that is all it
+         claims. */
+      var cal = state.answers["ph|cal"];
+      lines.push({ text:
+        (cal && cal.outcome === "recal")   ? CONFIG.ph.recalLine :
+        (cal && cal.outcome === "already") ? CONFIG.ph.alreadyLine :
+                                             CONFIG.ph.storeOnlyLine });
     }
 
     attentionLines(si).forEach(function(t){ lines.push({ text: t }); });
   });
+
+  if (CONFIG.footerText){
+    lines.push({ blank:true });
+    lines.push({ text: CONFIG.footerText });
+    if (CONFIG.appUrl) lines.push({ text: CONFIG.appUrl });
+  }
 
   return lines;
 }
@@ -984,25 +1210,50 @@ function fillGas(text, gas){ return String(text).replace("{gas}", gas); }
 /* Readings that are worth offering a flag for, checked when a screen is
    confirmed. The app suggests, it never flags anything on its own, and it
    asks whether or not the screen is already flagged. */
-function pendingAsks(screen){
-  var out = [];
+/* Which alert bands apply to a screen: the stop's or tank's own list if it
+   has one, otherwise a single band built from the app wide threshold. */
+function alertBands(screen){
   var stop = CONFIG.route[screen.stopIndex];
-  var limit;
+  var own = null, limit, gas;
 
   if (screen.kind === "psi"){
     var tank = stop.tanks[screen.tankIndex];
+    own = tank.alerts;
     limit = pick(tank.alertAtOrBelow, CONFIG.alertAtOrBelow);
-    if (typeof limit === "number" && answerFor(screen) <= limit){
-      out.push({ ask: fillGas(CONFIG.attention.emptyTankAsk, tank.gas),
-                 note: fillGas(CONFIG.attention.emptyTankNote, tank.gas) });
-    }
+    gas = tank.gas;
   } else if (screen.kind === "ln"){
-    var name = pick(stop.title, "LN");
+    own = stop.alerts;
     limit = pick(stop.alertAtOrBelow, CONFIG.alertAtOrBelow);
-    if (typeof limit === "number" && answerFor(screen) <= limit){
-      out.push({ ask: fillGas(CONFIG.attention.emptyTankAsk, name),
-                 note: fillGas(CONFIG.attention.emptyTankNote, name) });
+    gas = pick(stop.title, "LN");
+  } else {
+    return [];
+  }
+
+  if (own && own.length) return own;
+  if (typeof limit !== "number") return [];
+  return [{
+    atOrBelow: limit,
+    ask: fillGas(CONFIG.attention.emptyTankAsk, gas),
+    note: fillGas(CONFIG.attention.emptyTankNote, gas)
+  }];
+}
+
+/* Readings that are worth offering a flag for, checked when a screen is
+   confirmed. The app suggests, it never flags anything on its own, and it
+   asks whether or not the screen is already flagged. */
+function pendingAsks(screen){
+  var out = [];
+
+  if (screen.kind === "psi" || screen.kind === "ln"){
+    var v = answerFor(screen);
+    var bands = alertBands(screen);
+    for (var i = 0; i < bands.length; i++){
+      if (typeof bands[i].atOrBelow === "number" && v <= bands[i].atOrBelow){
+        out.push({ ask: bands[i].ask, note: bands[i].note });
+        break;   /* the first band the reading falls into wins */
+      }
     }
+
   } else if (screen.kind === "storage"){
     var counts = answerFor(screen);
     storageGases().forEach(function(gas){
@@ -1023,15 +1274,17 @@ function pendingAsks(screen){
 }
 
 /* ---------- navigation ---------- */
-function goHome(){ state.phase = "home"; render(); }
 function startFresh(){
   closeOverlay();
   clearSaved();
   state.answers = {};
   state.flags = {};
-  state.index = 0;
-  state.phase = "check";
-  state.editing = false;
+  state.done = {};
+  state.stopIndex = 0;
+  state.screenIndex = 0;
+  state.returnToReview = false;
+  state.original = null;
+  state.phase = "menu";
   saveNow();
   render();
 }
@@ -1040,15 +1293,40 @@ function resume(){
   if (!s){ startFresh(); return; }
   state.answers = s.answers || {};
   state.flags = s.flags || {};
-  state.index = Math.min(Math.max(0, s.index || 0), SCREENS.length-1);
-  state.phase = (s.phase === "review" || s.phase === "output") ? s.phase : "check";
-  state.editing = false;
+  state.done = s.done || {};
+  state.returnToReview = false;
+  state.original = null;
+  state.phase = (s.phase === "review" || s.phase === "output") ? s.phase : "menu";
   render();
 }
+function goMenu(){
+  closeOverlay();
+  state.phase = "menu";
+  state.returnToReview = false;
+  state.original = null;
+  saveNow();
+  render();
+}
+function openRoom(si){
+  closeOverlay();
+  state.stopIndex = si;
+  state.screenIndex = 0;
+  state.returnToReview = false;
+  state.original = null;
+  state.phase = "room";
+  render();
+}
+function currentScreens(){ return visitScreens(state.stopIndex); }
+function currentScreen(){
+  var scr = currentScreens();
+  return scr[Math.min(state.screenIndex, scr.length - 1)];
+}
+
 /* Confirming a screen first offers any flags the readings suggest, one after
    another, and only then moves on. */
 function confirmScreen(){
-  var screen = SCREENS[state.index];
+  var screen = currentScreen();
+  state.done[screen.id] = true;
   runAsks(screen, pendingAsks(screen), 0);
 }
 function runAsks(screen, asks, i){
@@ -1059,59 +1337,96 @@ function runAsks(screen, asks, i){
     function(){ runAsks(screen, asks, i + 1); });
 }
 function advanceScreen(){
-  if (state.editing){
-    state.editing = false;
+  if (state.returnToReview){
+    state.returnToReview = false;
     state.original = null;
     state.phase = "review";
-  } else if (state.index >= SCREENS.length - 1){
-    state.phase = "review";
+  } else if (state.screenIndex >= currentScreens().length - 1){
+    /* last screen of the room: back to the menu, with the room ticked off */
+    state.phase = "menu";
   } else {
-    state.index++;
+    state.screenIndex++;
   }
   saveNow();
   render();
 }
 function goBack(){
   closeOverlay();
-  if (state.editing){
-    var s = SCREENS[state.index];
+  if (state.returnToReview){
+    var s = currentScreen();
     if (state.original === null || state.original === undefined) delete state.answers[s.id];
     else state.answers[s.id] = state.original;
-    state.editing = false;
+    state.returnToReview = false;
     state.original = null;
     state.phase = "review";
-  } else if (state.index === 0){
-    state.phase = "home";
+  } else if (state.screenIndex === 0){
+    state.phase = "menu";
   } else {
-    state.index--;
+    state.screenIndex--;
   }
   saveNow();
   render();
 }
-function editFromReview(i){
-  state.index = i;
-  state.editing = true;
-  var s = SCREENS[i];
+/* Opened from the review list to fix one reading, then straight back. */
+function editScreen(si, idx){
+  closeOverlay();
+  state.stopIndex = si;
+  state.screenIndex = idx;
+  state.returnToReview = true;
+  var s = currentScreen();
   var cur = state.answers[s.id];
   state.original = (cur === undefined) ? null : JSON.parse(JSON.stringify(cur));
-  state.phase = "check";
+  state.phase = "room";
   render();
 }
 
-
 /* ---------- screen chrome ---------- */
 function topBar(){
-  var label = state.editing ? "Cancel" : "Back";
-  var kids = state.editing
-    ? [h("span", { text:"Cancel" })]
-    : [h("span", { class:"chev", html: ICON.back }), h("span", { text:"Back" })];
+  var stop = CONFIG.route[state.stopIndex];
+  var scr = currentScreens();
+  var where = pick(stop.tile, stop.name) + (stop.number ? " (" + stop.number + ")" : "");
   return h("div", { class:"topbar" }, [
-    h("button", { class:"iconbtn", type:"button", "aria-label":label, onclick: goBack }, kids),
-    h("div", { class:"step", text:"Step " + (state.index+1) + " of " + SCREENS.length })
+    h("button", {
+      class:"iconbtn", type:"button",
+      "aria-label": state.returnToReview ? "Cancel this edit" : "Back to the room menu",
+      onclick: goBack
+    }, state.returnToReview
+        ? [h("span", { text:"Cancel" })]
+        : [h("span", { class:"chev", html: ICON.back }), h("span", { text: where })]),
+    h("div", { class:"step", text: (state.screenIndex + 1) + " of " + scr.length })
   ]);
 }
 function progressBar(done, total){
   return h("div", { class:"progress" }, h("i", { style:"width:" + Math.round((done/total)*100) + "%" }));
+}
+
+/* Text with _underscores_ around the part to underline. */
+function richText(str){
+  var frag = document.createDocumentFragment();
+  var parts = String(str == null ? "" : str).split("_");
+  for (var i = 0; i < parts.length; i++){
+    if (!parts[i]) continue;
+    if (i % 2 === 1) frag.appendChild(h("u", { text: parts[i] }));
+    else frag.appendChild(document.createTextNode(parts[i]));
+  }
+  return frag;
+}
+
+/* The circled i keeps its open or closed state only while you are on the
+   same screen; moving on closes it. */
+var infoOpen = false, infoFor = null;
+function setInfoFor(id){
+  if (infoFor !== id){ infoFor = id; infoOpen = false; }
+}
+function infoButton(screen){
+  return h("button", {
+    class: "infobtn" + (infoOpen ? " on" : ""),
+    type: "button",
+    "aria-expanded": infoOpen ? "true" : "false",
+    "aria-label": "How to do this step",
+    html: ICON.info,
+    onclick: function(){ infoOpen = !infoOpen; render(); }
+  });
 }
 function flagButton(screen){
   var on = state.flags[screen.id] !== undefined;
@@ -1124,19 +1439,25 @@ function flagButton(screen){
     onclick: function(){ openFlagSheet(screen, null, null); }
   });
 }
-function titles(screen){
-  return h("div", { class:"titles" }, [
-    h("div", { class:"titletext" }, [
-      h("div", { class:"room", text: screen.heading }),
-      h("div", { class:"tank", text: screen.sub })
-    ]),
-    flagButton(screen)
-  ]);
+/* The sentence at the top of a screen, with the i and the warning beside it. */
+function promptRow(screen){
+  var text = h("div", { class:"prompt-text" });
+  text.appendChild(richText(screen.prompt));
+  var kids = [text];
+  if (screen.info) kids.push(infoButton(screen));
+  kids.push(flagButton(screen));
+  return h("div", { class:"titles" }, kids);
+}
+function infoBubble(screen){
+  if (!infoOpen || !screen.info) return null;
+  var body = h("div", { class:"bubble" });
+  body.appendChild(richText(screen.info));
+  return h("div", { class:"bubblewrap" }, [h("i", { class:"bubbletip" }), body]);
 }
 function confirmButton(label){
   return h("button", { class:"btn btn-primary", type:"button", onclick: confirmScreen }, [
     h("span", { class:"chev", html: ICON.check }),
-    h("span", { text: label || (state.editing ? "Save" : "Confirm") })
+    h("span", { text: label || (state.returnToReview ? "Save" : "Confirm") })
   ]);
 }
 
@@ -1148,7 +1469,7 @@ function screenSlider(screen){
 
   var slider = makeSlider({
     min: screen.min, max: screen.max, step: screen.step, unit: screen.unit,
-    value: answerFor(screen), label: screen.heading + " " + screen.sub,
+    value: answerFor(screen), label: screen.prompt,
     onInput: function(v){
       readNum.textContent = String(v);
       state.answers[screen.id] = v;
@@ -1160,7 +1481,8 @@ function screenSlider(screen){
 
   var fineLabel = function(n){ return (n > 0 ? "+" : "") + n; };
   return h("div", { class:"screen" }, [
-    titles(screen),
+    promptRow(screen),
+    infoBubble(screen),
     h("div", { class:"readout" }, [readNum, h("div", { class:"unit", text: screen.unit })]),
     wrap,
     h("div", { class:"controls" }, [
@@ -1204,24 +1526,25 @@ function screenStorage(screen){
   });
 
   return h("div", { class:"screen" }, [
-    titles(screen),
-    h("div", { class:"hint", text:"Cylinders in storage for this room." }),
+    promptRow(screen),
+    infoBubble(screen),
     h("div", { class:"scroll" }, rows),
     h("div", { class:"controls" }, [confirmButton()])
   ]);
 }
 
-function screenPh(screen){
-  function choose(kind){
-    state.answers[screen.id] = { state: kind };
+/* The weekly calibration question. Both answers settle the week, and
+   neither one asks anybody what somebody else did. */
+function screenPhCal(screen){
+  function choose(outcome){
+    state.answers[screen.id] = { outcome: outcome };
     saveNow();
     confirmScreen();
   }
   return h("div", { class:"screen" }, [
-    titles(screen),
-    h("div", { class:"center" }, [
-      h("div", { class:"prompt", text: CONFIG.ph.prompt })
-    ]),
+    promptRow(screen),
+    infoBubble(screen),
+    h("div", { class:"center" }),
     h("div", { class:"controls" }, [
       h("button", { class:"btn btn-primary", type:"button", onclick: function(){ choose("already"); } },
         [h("span", { class:"chev", html: ICON.check }), h("span", { text: CONFIG.ph.alreadyButton })]),
@@ -1231,38 +1554,78 @@ function screenPh(screen){
   ]);
 }
 
+/* Storage, asked on every visit. Confirming here is also what settles the
+   week, so backing out half way leaves the calibration still to do. */
+function screenPhStore(screen){
+  var cal = state.answers["ph|cal"];
+  var settled = phWeekDone();
+  var recalNow = !!(settled && cal && cal.outcome === "recal");
+
+  var controls = [
+    h("button", { class:"btn btn-primary", type:"button", onclick: function(){
+      state.answers[screen.id] = { ok: true };
+      var c = state.answers["ph|cal"];
+      if (c && c.outcome) setPhWeekDone(c.outcome);
+      saveNow();
+      confirmScreen();
+    }}, [h("span", { class:"chev", html: ICON.check }), h("span", { text: CONFIG.ph.storeButton })])
+  ];
+
+  /* An escape hatch for anyone who recalibrates on a week already settled. */
+  if (settled){
+    controls.push(h("button", {
+      class: "btn btn-quiet" + (recalNow ? " on" : ""), type:"button",
+      onclick: function(){
+        state.answers["ph|cal"] = { outcome: "recal" };
+        setPhWeekDone("recal");
+        saveNow();
+        toast("Recalibration recorded.");
+        render();
+      }
+    }, CONFIG.ph.recalLater));
+  }
+
+  return h("div", { class:"screen" }, [
+    promptRow(screen),
+    infoBubble(screen),
+    h("div", { class:"center" }),
+    h("div", { class:"controls" }, controls)
+  ]);
+}
 function reviewValue(screen){
   var a = answerFor(screen);
-  if (screen.kind === "psi")  return { text: a + " psi", small:false };
-  if (screen.kind === "ln")   return { text: a + "%", small:false };
+  if (screen.kind === "psi")     return { text: a + " psi", small:false };
+  if (screen.kind === "ln")      return { text: a + "%", small:false };
   if (screen.kind === "storage") return { text: storageText(a), small:true };
-  if (screen.kind === "ph"){
-    return { text: phState(a) === "recal" ? "Recalibrated today" : "Calibrated", small:true };
-  }
+  if (screen.kind === "phcal")   return { text: (a && a.outcome === "recal") ? "Recalibrated today" : "Checked and good", small:true };
+  if (screen.kind === "phstore") return { text: "Stored correctly", small:true };
   return { text:"", small:true };
 }
 function screenReview(){
   var list = h("div", { class:"pad" });
-  var lastStop = -1;
-  SCREENS.forEach(function(s, i){
-    if (s.stopIndex !== lastStop){
-      lastStop = s.stopIndex;
-      list.appendChild(h("div", { class:"group", text: s.heading }));
-    }
-    var v = reviewValue(s);
-    list.appendChild(h("button", { class:"item", type:"button", onclick: function(){ editFromReview(i); } }, [
-      state.flags[s.id] === undefined ? null : h("div", { class:"flag", html: ICON.warnSm }),
-      h("div", { class:"who", text: s.sub }),
-      h("div", { class:"what" + (v.small ? " small" : ""), text: v.text }),
-      h("div", { class:"chev", html: ICON.chev })
-    ]));
+
+  messageStops().forEach(function(entry){
+    var stop = entry.stop, si = entry.si;
+    var scr = visitScreens(si);
+    if (!scr.length) return;
+    list.appendChild(h("div", { class:"group",
+      text: stop.name + (stop.number ? " (" + stop.number + ")" : "") }));
+    scr.forEach(function(s, idx){
+      var v = reviewValue(s);
+      list.appendChild(h("button", { class:"item", type:"button",
+        onclick: function(){ editScreen(si, idx); } }, [
+        state.flags[s.id] === undefined ? null : h("div", { class:"flag", html: ICON.warnSm }),
+        h("div", { class:"who", text: s.label }),
+        h("div", { class:"what" + (v.small ? " small" : ""), text: v.text }),
+        h("div", { class:"chev", html: ICON.chev })
+      ]));
+    });
   });
 
   return h("div", { class:"app" }, [
     h("div", { class:"topbar" }, [
-      h("button", { class:"iconbtn", type:"button", onclick: function(){
-        state.index = SCREENS.length - 1; state.phase = "check"; render();
-      }}, [h("span", { class:"chev", html: ICON.back }), h("span", { text:"Back" })]),
+      h("button", { class:"iconbtn", type:"button", onclick: goMenu },
+        [h("span", { class:"chev", html: ICON.back }), h("span", { text:"Rooms" })]),
       h("div", { class:"step", text:"Review" })
     ]),
     progressBar(1,1),
@@ -1280,7 +1643,6 @@ function screenReview(){
     ])
   ]);
 }
-
 var clearArmed = false, clearTimer = null;
 /* The preview is built from the same lines the clipboard gets, with the room
    names really bold, so the box shows what Slack will show. */
@@ -1350,20 +1712,82 @@ function screenOutput(){
   ]);
 }
 
+/* ---------- the room menu ---------- */
+function screenMenu(){
+  var grid = h("div", { class:"menu" });
+
+  menuStops().forEach(function(entry){
+    var stop = entry.stop, si = entry.si;
+    var done = stopDone(si);
+    var kids = [];
+
+    if (done) kids.push(h("div", { class:"tickbadge", html: ICON.check }));
+    kids.push(h("div", { class:"tilename", text: pick(stop.tile, stop.name) }));
+    if (stop.number) kids.push(h("div", { class:"tilenum", text: stop.number }));
+
+    var stats = tileStats(stop);
+    if (stats.length){
+      var box = h("div", { class:"tilestats" });
+      stats.forEach(function(line){ box.appendChild(h("div", { text: line })); });
+      kids.push(box);
+    }
+    if (stop.floor) kids.push(h("div", { class:"tilefloor", text: stop.floor }));
+
+    grid.appendChild(h("button", {
+      class: "tile" + (done ? " done" : ""),
+      type: "button",
+      "aria-label": pick(stop.tile, stop.name) + (done ? ", checked" : ", not checked yet"),
+      onclick: function(){ openRoom(si); }
+    }, kids));
+  });
+
+  var left = roomsLeft();
+  var ready = (left === 0);
+  var build = h("button", {
+    class: "btn " + (ready ? "btn-primary" : "btn-blocked"),
+    type: "button",
+    onclick: ready
+      ? function(){ state.phase = "review"; saveNow(); render(); }
+      : function(){ toast(left === 1 ? "One room still to check." : left + " rooms still to check."); }
+  }, ready
+      ? [h("span", { text:"Build Slack message" }), h("span", { class:"chev", html: ICON.chev })]
+      : [h("span", { text:"Build Slack message" }),
+         h("span", { class:"leftnote", text: left === 1 ? "1 room left" : left + " rooms left" })]);
+
+  return h("div", { class:"app" }, [
+    h("div", { class:"menuhead" }, [
+      h("h1", { text: CONFIG.appTitle }),
+      h("div", { class:"menumeta", text: todayMD() + " · " + doneCount() + " of " + CONFIG.route.length + " done" })
+    ]),
+    h("div", { class:"menuhint", text: CONFIG.menuHint }),
+    grid,
+    h("div", { class:"controls" }, [build])
+  ]);
+}
+
 function screenHome(){
   saved = readSaved();
-  var hasSaved = !!saved && !!saved.answers && Object.keys(saved.answers).length > 0;
-  var finished = hasSaved && (saved.phase === "review" || saved.phase === "output");
-  var cardTitle = finished ? "Check finished" : "Check in progress";
+  var started = !!saved && (
+    (saved.done && Object.keys(saved.done).length > 0) ||
+    (saved.answers && Object.keys(saved.answers).length > 0)
+  );
+  var finished = started && saved.phase === "output";
+
+  var cardTitle = finished ? "Message ready to copy" : "Check in progress";
   var stepText = "";
-  if (finished){
-    stepText = "Every reading taken, saved " + relTime(saved.savedAt);
-  } else if (hasSaved){
-    stepText = "Step " + (Math.min((saved.index||0)+1, SCREENS.length)) + " of " + SCREENS.length +
-               ", saved " + relTime(saved.savedAt);
+  if (started){
+    var n = 0;
+    try {
+      CONFIG.route.forEach(function(stop, si){
+        var scr = visitScreens(si), all = scr.length > 0;
+        scr.forEach(function(s){ if (!saved.done[s.id]) all = false; });
+        if (all) n++;
+      });
+    } catch(e){}
+    stepText = n + " of " + CONFIG.route.length + " rooms done, saved " + relTime(saved.savedAt);
   }
 
-  var buttons = hasSaved
+  var buttons = started
     ? [
         h("button", { class:"btn btn-primary", type:"button", onclick: resume },
           finished ? "Open the message" : "Resume check"),
@@ -1371,11 +1795,7 @@ function screenHome(){
       ]
     : [ h("button", { class:"btn btn-primary", type:"button", onclick: startFresh }, "Start check") ];
 
-  var stops = CONFIG.route.map(function(s){
-    if (s.type === "room") return s.name;
-    if (s.type === "ln") return pick(s.title, "LN");
-    return pick(s.title, "pH probe");
-  }).join(", ");
+  var rooms = menuStops().map(function(e){ return pick(e.stop.tile, e.stop.name); }).join(", ");
 
   return h("div", { class:"app" }, [
     h("div", { class:"screen" }, [
@@ -1385,14 +1805,14 @@ function screenHome(){
         ]),
         h("div", { class:"pad" }, [
           h("div", { class:"card" }, [
-            h("h2", { text: todayMD() + " round, " + SCREENS.length + " steps" }),
-            h("p", { text: stops })
+            h("h2", { text: todayMD() + " round, " + CONFIG.route.length + " rooms" }),
+            h("p", { text: rooms })
           ]),
           h("div", { class:"card cardrow" }, [
             h("div", { class:"cardicon", html: ICON.warn }),
             h("p", { text: CONFIG.attention.homeHint })
           ]),
-          hasSaved ? h("div", { class:"card" }, [
+          started ? h("div", { class:"card" }, [
             h("h2", { text: cardTitle }),
             h("p", { text: stepText })
           ]) : null
@@ -1402,8 +1822,6 @@ function screenHome(){
     ])
   ]);
 }
-
-
 /* ---------- clipboard ----------
    Slack only turns *asterisks* and :shortcodes: into formatting while you
    type them. Pasted text is taken literally, which is why a plain text copy
@@ -1524,20 +1942,26 @@ function render(){
 
   if (state.phase === "home"){
     next = screenHome();
+  } else if (state.phase === "menu"){
+    next = screenMenu();
   } else if (state.phase === "review"){
     next = screenReview();
   } else if (state.phase === "output"){
     next = screenOutput();
   } else {
-    var screen = SCREENS[state.index];
+    var scr = currentScreens();
+    if (state.screenIndex > scr.length - 1) state.screenIndex = scr.length - 1;
+    if (state.screenIndex < 0) state.screenIndex = 0;
+    var screen = scr[state.screenIndex];
+    setInfoFor(screen.id);
     var inner =
-      screen.kind === "psi"     ? screenSlider(screen) :
-      screen.kind === "ln"      ? screenSlider(screen) :
-      screen.kind === "storage" ? screenStorage(screen) :
-                                  screenPh(screen);
+      (screen.kind === "psi" || screen.kind === "ln") ? screenSlider(screen) :
+      screen.kind === "storage"  ? screenStorage(screen) :
+      screen.kind === "phcal"    ? screenPhCal(screen) :
+                                   screenPhStore(screen);
     next = h("div", { class:"app" }, [
       topBar(),
-      progressBar(state.index + 1, SCREENS.length),
+      progressBar(state.screenIndex + 1, scr.length),
       inner
     ]);
   }
@@ -1545,7 +1969,6 @@ function render(){
   next.id = "app";
   root.parentNode.replaceChild(next, root);
 }
-
 /* ---------- go ---------- */
 saved = readSaved();
 render();

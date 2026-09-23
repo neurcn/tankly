@@ -1,7 +1,7 @@
 {
-  "name": "Tank Check",
-  "short_name": "Tank Check",
-  "description": "Walk the lab gas tank route, log every reading, copy a ready to paste Slack update.",
+  "name": "Tankly",
+  "short_name": "Tankly",
+  "description": "Walk the lab gas tank rounds, log every reading, copy a ready to paste Slack update.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -9,8 +9,22 @@
   "background_color": "#10202f",
   "theme_color": "#10202f",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
-    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
   ]
 }
