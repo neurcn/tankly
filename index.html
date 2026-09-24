@@ -248,6 +248,31 @@ button{font:inherit;color:inherit;margin:0;touch-action:manipulation;cursor:poin
 .hero{padding:14px 18px 2px}
 .hero h1{margin:0;font-size:34px;font-weight:800;letter-spacing:-.03em}
 .hero p{margin:6px 0 0;font-size:17px;color:var(--muted);line-height:1.45}
+.welcome{margin-top:10px;font-size:19px;font-weight:600;letter-spacing:-.01em}
+.notyou{
+  display:inline-block;margin-top:2px;padding:10px 2px;background:none;border:0;
+  color:var(--muted);font-size:15px;font-weight:600;text-decoration:underline;
+}
+.notyou:active{color:var(--text)}
+.linkbtn{
+  width:100%;min-height:50px;background:transparent;border:0;
+  color:var(--muted);font-size:16px;font-weight:600;text-decoration:underline;
+}
+.linkbtn:active{color:var(--text)}
+.guidesteps{display:flex;flex-direction:column;gap:19px;padding:2px 2px 8px}
+.gstep{display:flex;gap:13px;align-items:flex-start}
+.gnum{
+  flex:none;width:29px;height:29px;border-radius:50%;background:var(--accent-soft);
+  color:var(--accent);font-size:15px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums;
+}
+.gnum.warn{color:var(--warn)}
+.gnum.ok{color:var(--ok)}
+.gtext{flex:1;min-width:0}
+.gtitle{font-size:17px;font-weight:800;letter-spacing:-.01em;line-height:1.25}
+.gbody{margin-top:3px;font-size:15px;color:var(--muted);line-height:1.45}
+.gnotes{margin-top:8px;border-top:1px solid var(--line);padding-top:16px;display:flex;flex-direction:column;gap:11px}
+.gnotes div{font-size:14.5px;color:var(--muted);line-height:1.5}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:var(--shadow)}
 .card h2{margin:0 0 4px;font-size:17px;font-weight:700}
 .card p{margin:0;font-size:15px;color:var(--muted);line-height:1.45}
@@ -572,7 +597,6 @@ var CONFIG = {
      The app also offers to raise a flag by itself when a reading looks bad.
      {gas} in the wording below is replaced with N2, CO2 or LN. */
   attention: {
-    homeHint: "Tap this at the top right of any screen to flag something that needs attention.",
     sheetTitle: "Needs attention",
     notePlaceholder: "Low tank, nothing left in storage, etc.",
     linePrefix: "ATTENTION: ",     /* when a note was typed */
@@ -634,6 +658,42 @@ var CONFIG = {
      to hold something. Plain text needs none of this: a real empty line
      comes through untouched. */
   blankLineChar: " ",
+
+  /* The line under the title on the opening screen. {name} is whoever the
+     phone remembers. Somebody who has never published a check gets the
+     first one, so a person who made themselves ten seconds ago is not
+     welcomed back. */
+  welcome: {
+    back: "Welcome back, {name}",
+    first: "Hello, {name}",
+    notYou: "Not you?"
+  },
+
+  /* The How to use page, opened from the foot of the opening screen. One
+     page, not a tour: it is meant to be skimmed once by somebody who has
+     never done this, and ignored forever after. */
+  guide: {
+    open: "How to use Tankly",
+    title: "How to use Tankly",
+    steps: [
+      { title: "Say who you are",
+        body: "Tap your name, or make one with your initials." },
+      { title: "Tap the room you are in",
+        body: "Any order. Walk the building however you like." },
+      { title: "Set each reading",
+        body: "Drag the slider, nudge it with the small buttons, then Confirm." },
+      { title: "Flag anything off", tone: "warn",
+        body: "The ⚠ at the top right of any screen. A note is optional." },
+      { title: "Finish every room",
+        body: "The menu ticks off the ones you have done." },
+      { title: "Copy it into Slack", tone: "ok",
+        body: "Copying is what saves the check. Nothing is recorded until you do." }
+    ],
+    notes: [
+      "Some screens have an ⓘ with extra guidance on that exact check.",
+      "Get interrupted and Tankly keeps your place. Just reopen it."
+    ]
+  },
 
   /* The who-is-checking screen. Everyone picks themselves once on a phone
      and Tankly remembers; the chip on the room menu switches. Nobody is
@@ -1396,6 +1456,20 @@ function roster(){
   });
   return out;
 }
+/* How many checks this person has published, or null when the sheet has
+   not said. */
+function myCheckCount(){
+  if (!me || !summary) return null;
+  var found = (summary.users || []).filter(function(u){ return u.name === me.name; })[0];
+  return found ? found.count : 0;
+}
+function greeting(){
+  if (!me) return "";
+  var count = myCheckCount();
+  var line = (count === 0) ? CONFIG.welcome.first : CONFIG.welcome.back;
+  return String(line).replace("{name}", (me.emoji ? me.emoji + " " : "") + me.initials);
+}
+
 /* One emoji, and nothing but. Letters, digits and two of anything are out. */
 function isSingleEmoji(str){
   var t = String(str || "").trim();
@@ -2393,6 +2467,38 @@ function screenMenu(){
   ]);
 }
 
+function screenGuide(){
+  var body = h("div", { class:"guidesteps" });
+
+  (CONFIG.guide.steps || []).forEach(function(step, i){
+    body.appendChild(h("div", { class:"gstep" }, [
+      h("div", { class:"gnum" + (step.tone ? " " + step.tone : ""), text: String(i + 1) }),
+      h("div", { class:"gtext" }, [
+        h("div", { class:"gtitle", text: step.title }),
+        h("div", { class:"gbody", text: step.body })
+      ])
+    ]));
+  });
+
+  var notes = CONFIG.guide.notes || [];
+  if (notes.length){
+    var box = h("div", { class:"gnotes" });
+    notes.forEach(function(t){ box.appendChild(h("div", { text: t })); });
+    body.appendChild(box);
+  }
+
+  return h("div", { class:"app" }, [
+    h("div", { class:"topbar" }, [
+      h("button", { class:"iconbtn", type:"button", onclick: function(){ state.phase = "home"; render(); } },
+        [h("span", { class:"chev", html: ICON.back }), h("span", { text:"Back" })])
+    ]),
+    h("div", { class:"screen" }, [
+      h("div", { class:"hero" }, [h("h1", { text: CONFIG.guide.title })]),
+      h("div", { class:"scroll" }, h("div", { class:"pad" }, body))
+    ])
+  ]);
+}
+
 function screenHome(){
   saved = readSaved();
   var started = !!saved && (
@@ -2423,22 +2529,27 @@ function screenHome(){
       ]
     : [ h("button", { class:"btn btn-primary", type:"button", onclick: startFresh }, "Start check") ];
 
+  /* quiet on purpose: findable by somebody who has never done this, and
+     easy to stop noticing once you have */
+  buttons.push(h("button", { class:"linkbtn", type:"button",
+    onclick: function(){ state.phase = "guide"; render(); } }, CONFIG.guide.open));
+
   var rooms = menuStops().map(function(e){ return pick(e.stop.tile, e.stop.name); }).join(", ");
 
   return h("div", { class:"app" }, [
     h("div", { class:"screen" }, [
       h("div", { class:"scroll" }, h("div", null, [
         h("div", { class:"hero" }, [
-          h("h1", { text: CONFIG.appTitle })
+          h("h1", { text: CONFIG.appTitle }),
+          me ? h("div", { class:"welcome", text: greeting() }) : null,
+          me ? h("button", { class:"notyou", type:"button",
+                  onclick: function(){ state.phase = "who"; render(); } },
+                  CONFIG.welcome.notYou) : null
         ]),
         h("div", { class:"pad" }, [
           h("div", { class:"card" }, [
             h("h2", { text: todayMD() + " round, " + CONFIG.route.length + " rooms" }),
             h("p", { text: rooms })
-          ]),
-          h("div", { class:"card cardrow" }, [
-            h("div", { class:"cardicon", html: ICON.warn }),
-            h("p", { text: CONFIG.attention.homeHint })
           ]),
           started ? h("div", { class:"card" }, [
             h("h2", { text: cardTitle }),
@@ -2574,6 +2685,8 @@ function render(){
     next = screenNewInitials();
   } else if (state.phase === "newemoji"){
     next = screenNewEmoji();
+  } else if (state.phase === "guide"){
+    next = screenGuide();
   } else if (state.phase === "home"){
     next = screenHome();
   } else if (state.phase === "menu"){

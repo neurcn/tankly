@@ -36,6 +36,17 @@ tap a finished room again to fix a reading. iPSC is marked **Floor 2**.
 **Build Slack message stays blocked until all six rooms are checked**, so the
 message can never report a number nobody read.
 
+## How to use Tankly
+
+The opening screen greets whoever the phone remembers and carries a quiet
+**How to use Tankly** link at the foot of it, which opens a single page of six
+steps. It is meant to be skimmed once by somebody who has never done this and
+ignored forever after, which is why it is one page rather than a tour, and why
+it sits below the Start button rather than competing with it.
+
+The wording lives in `CONFIG.guide`, so the steps can be rewritten without
+touching anything else.
+
 ## Who is checking
 
 The first thing Tankly asks is who you are. Pick yourself from the list, or
@@ -310,6 +321,8 @@ reads `Storage: none`.
 | `messageTitle` | The first line of the message, before the date. |
 | `copyStyle` | How Copy puts the message on the clipboard. See the Copy section above. |
 | `people` | Every word on the who-is-checking screens. |
+| `welcome` | The greeting on the opening screen and the Not you? link. Somebody who has never published gets the first-time wording. |
+| `guide` | Every word of the How to use page. |
 | `statsLabel`, `medals`, `streakMark` | The Tank Checks line. Set `statsLabel` to `""` to drop it. |
 | `logUrl`, `logTimeoutMs` | The shared log. Empty means off. |
 | `storageWords` | The wording on a storage screen. |
