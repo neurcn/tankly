@@ -367,7 +367,7 @@ var CONFIG = {
 
   /* The last two lines of the Slack message. The link goes on its own line
      because a pasted message cannot turn a single word into a link. */
-  footerText: "Streamlined with Tankly",
+  footerText: "Logged with Tankly",
 
   /* ============================ THE ROOMS ============================
      The ORDER OF THIS LIST is the order the rooms appear in the Slack
@@ -1105,8 +1105,16 @@ function buildMessageLines(){
   }
 
   /* Worked out once and then left alone, so the line that was read on screen
-     is the line that gets copied, and a second copy does not count twice. */
-  if (state.stats === null || state.stats === undefined) state.stats = statsLine();
+     is the line that gets copied, and a second copy does not count twice.
+
+     It settles only on a real line. The sheet can take fifteen seconds to
+     answer, and freezing the blank it leaves behind would drop the line from
+     a check that was walked quickly. Once the check has gone, whatever was
+     copied stands, blank or not. */
+  if (!checkSent && (state.stats === null || state.stats === undefined)){
+    var line = statsLine();
+    if (line) state.stats = line;
+  }
   if (state.stats){
     lines.push({ blank:true });
     lines.push({ text: state.stats });
@@ -1454,7 +1462,8 @@ function loadLastCheck(tries){
       writeCache(LOG_LAST_KEY, lastCheck);
     }
     /* only redraw somewhere harmless: never under somebody's thumb */
-    if (state.phase === "home" || state.phase === "menu" || state.phase === "who") render();
+    if (state.phase === "home" || state.phase === "menu" ||
+        state.phase === "who"  || state.phase === "output") render();
   }, function(){
     /* one more go, since a slow answer is the common kind of failure here */
     if (!tries) setTimeout(function(){ loadLastCheck(1); }, 2500);

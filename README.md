@@ -363,7 +363,7 @@ ATTENTION: LN at 10%
 pH Probe
 Calibration checked and good, stored correctly
 
-Streamlined with Tankly
+Logged with Tankly
 https://neurcn.github.io/tankly/
 
 Tank Checks: 45 | #1 🥇 | 2 🔥
