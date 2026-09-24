@@ -61,35 +61,61 @@ nothing worse than a wrong name.
 The list comes from the sheet, most recent publisher first, and is empty but
 for **+ New user** until somebody publishes.
 
-## Flagging something that needs attention
+## ATTENTION lines
 
-Every screen has a ⚠ button in the top right corner. Tap it to mark that the
-tank, the storage, the LN or the probe needs attention. You can type a short
-note or just confirm without one. A flagged screen adds a line under its own
-room in the message and puts a warning emoji beside the room name:
+An `ATTENTION` line under a room, and the ⚠️ beside its name, come from two
+places that combine into one line.
 
-```
-Secondary (3326) ⚠️
-Running: N2 0 psi | CO2 850 psi | CO2 700 psi
-Storage: 1 N2 (empty), 2 CO2 (empty)
-ATTENTION: Empty N2
-ATTENTION: No full CO2 in storage
-```
+**The readings flag themselves.** Nobody is asked to confirm these and none of
+them can be skipped by tapping through. They are worked out fresh every time
+the message is built, so correcting a reading corrects its note too.
 
-Flag it again to edit the note or remove the flag. Two flags in the same room
-give two lines.
-
-The app also offers a flag by itself when a reading looks bad, and it only
-ever offers: it never flags anything on its own, and it asks whether or not
-you already flagged that screen.
-
-| When | What it offers |
+| Reading | Note |
 | --- | --- |
-| A tank confirmed at 0 psi | `Empty CO2` or `Empty N2` |
+| A tank at 0 psi | `Empty CO2` or `Empty N2` |
 | LN at 0% | `Empty LN` |
 | LN from 1 to 9% | `LN <10%` |
 | LN at exactly 10% | `LN at 10%` |
-| A storage room with no full cylinders of a gas left, but empties sitting there | `No full N2 in storage` |
+| An empty cylinder in a room that stocks that gas, with no full one left | `No full CO2 in storage` |
+| An empty cylinder anywhere else | `1 empty CO2 in storage` |
+
+**You flag anything else** with the ⚠ button at the top right of any screen.
+Type a short note, or confirm without one. That button is lit whenever the
+screen is flagged, by the readings or by you, and the sheet tells you which:
+open it on a screen the readings already flagged and it says *Already noted:
+No full CO2 in storage* above the note field.
+
+**Both at once join with a semicolon**, the automatic note first:
+
+```
+Secondary (3326) ⚠️
+Running: N2 2700 psi | CO2 900 psi | CO2 850 psi
+Storage: 1 N2 (full), 2 CO2 (empty)
+ATTENTION: No full CO2 in storage; weird noise from the regulator
+```
+
+## The ordering list
+
+Anything empty also earns a line in a `To order` list at the end of the
+message, with the room it belongs to:
+
+```
+To order
+2xCO2 to room 3326
+1xCO2 to room 3343
+LN to room 3325
+```
+
+**It is built from the readings, not from the flags.** A list that depends on
+somebody remembering to flag something is a list that will be one cylinder
+short on the day it matters. LN earns a line whenever it is low enough to
+raise a note of its own.
+
+Running tanks do not appear. An empty one gets a spare swapped in from
+storage, and the empty that creates is what ends up on the list.
+
+The section is left out entirely when there is nothing to order. Its wording
+lives in `CONFIG.order`.
 
 ## The circled i
 
@@ -273,8 +299,7 @@ storage: {
     { gas: "CO2", label: "CO₂ one" },
     { gas: "CO2", label: "CO₂ two" }
   ],
-  allowExtra: true,
-  alertWhenNoneFull: ["N2", "CO2"]
+  allowExtra: true
 }
 ```
 
@@ -288,11 +313,11 @@ Secondary has the three slots above. Primary has none, because it normally
 holds nothing; on the day something is out there you add it, and most days it
 is zero taps and `Storage: none`.
 
-`alertWhenNoneFull` lists the gases whose whole purpose is to be a full spare.
-When none of that gas is left full, the app offers an alert. Secondary's stock
-is exactly that, so one empty CO₂ is quiet and two is not. Primary's list is
-empty on purpose: a cylinder sitting there was almost certainly just swapped
-out, and an empty one is ordinary.
+Every empty raises an ATTENTION and earns a line in the ordering list,
+wherever it is. The only difference a room's slots make is the wording: a room
+that stocks spares of a gas says `No full CO2 in storage` once the last full
+one is gone, while a room like Primary, which has no slots and is just holding
+something that was swapped out, says `1 empty CO2 in storage`.
 
 A room with no `storage` at all gets no screen and no Storage line.
 
@@ -316,7 +341,8 @@ reads `Storage: none`.
 | `alertAtOrBelow` | A tank at or below this reading offers an alert. Default 0, meaning only a completely empty tank. A stop can replace it outright with `alerts` bands, the way LN does. |
 | `storageItems` | The four counter rows and how they are worded in the message. |
 | `ph` | Every word on the two probe screens and the three lines they can produce. |
-| `attention` | The wording of the flag sheet, the automatic prompts, and the `ATTENTION` line. |
+| `attention` | The wording of the flag sheet, the automatic notes, and the `ATTENTION` line. |
+| `order` | The wording of the ordering list at the end of the message. |
 | `messageOrder` | The order of the sections in the message by stop type. Rooms first, then LN, then the probe. |
 | `messageTitle` | The first line of the message, before the date. |
 | `copyStyle` | How Copy puts the message on the clipboard. See the Copy section above. |
@@ -369,12 +395,16 @@ Running: CO2 1500 psi | N2 2400 psi
 iPSC Room (2308)
 Running: CO2 750 psi | CO2 900 psi
 
-LN ⚠️
+LN (3325) ⚠️
 Level: 10%
 ATTENTION: LN at 10%
 
-pH Probe
+pH Probe (3319)
 Calibration checked and good, stored correctly
+
+To order
+1xCO2 to room 3343
+LN to room 3325
 
 Logged with Tankly
 https://neurcn.github.io/tankly/

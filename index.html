@@ -308,6 +308,7 @@ button{font:inherit;color:inherit;margin:0;touch-action:manipulation;cursor:poin
 }
 .sheet h2{margin:0;font-size:22px;font-weight:800;line-height:1.3}
 .sheet .where{margin:0 0 2px;font-size:15px;font-weight:600;color:var(--muted)}
+.sheet .autonote{margin:0 0 2px;font-size:14.5px;font-weight:600;color:var(--warn);line-height:1.4}
 .cardrow{display:flex;align-items:center;gap:12px}
 .cardicon{
   flex:none;width:44px;height:44px;border-radius:13px;background:var(--warn);
@@ -436,18 +437,17 @@ var CONFIG = {
          cylinder: the screen asks about each one by name, so nobody counts
          anything. Add a cylinder here and it is asked about from then on.
 
-         alertWhenNoneFull lists the gases whose whole point is to be a full
-         spare. When none of that gas is left full, the app offers an alert.
-         Secondary's stock is exactly that, so both gases are listed: one
-         empty CO2 still leaves a full one, two does not. */
+         Every empty raises an ATTENTION and earns a line in the ordering
+         list. A room that stocks a gas on purpose, like this one, says "no
+         full CO2 in storage" once the last full one is gone, rather than
+         just counting the empties. */
       storage: {
         slots: [
           { gas: "N2",  label: "N₂"      },
           { gas: "CO2", label: "CO₂ one" },
           { gas: "CO2", label: "CO₂ two" }
         ],
-        allowExtra: true,
-        alertWhenNoneFull: ["N2", "CO2"]
+        allowExtra: true
       },
       tanks: [
         { label: "N2 Tank 1",  gas: "N2",  min: 0, max: 3000,
@@ -464,24 +464,24 @@ var CONFIG = {
       menu: 5, min: 0, max: 100,
       prompt: "Record the LN level.",
       /* Bands are read top to bottom and the first one the reading falls
-         into is the one offered. Put the most serious one first. */
+         into is the note that gets used. Put the most serious one first.
+         Falling into any band also puts LN on the ordering list. */
       alerts: [
-        { atOrBelow: 0,  ask: "Create an alert for empty LN?", note: "Empty LN" },
-        { atOrBelow: 9,  ask: "Create an alert for low LN?",   note: "LN <10%" },
-        { atOrBelow: 10, ask: "Create an alert for low LN?",   note: "LN at 10%" }
+        { atOrBelow: 0,  note: "Empty LN" },
+        { atOrBelow: 9,  note: "LN <10%" },
+        { atOrBelow: 10, note: "LN at 10%" }
       ]
     },
 
     {
       type: "room", name: "Primary", tile: "Primary", number: "3343",
       menu: 4,
-      /* Primary normally has nothing out there. What does turn up is usually
-         a cylinder that was just swapped out, so an empty here is ordinary
-         and worth no alert: alertWhenNoneFull is deliberately empty. */
+      /* Primary normally has nothing out there. What turns up is usually a
+         cylinder that was just swapped out, so it has no slots of its own
+         and anything here is counted rather than called a missing spare. */
       storage: {
         slots: [],
-        allowExtra: true,
-        alertWhenNoneFull: []
+        allowExtra: true
       },
       tanks: [
         { label: "CO2 Tank 1", gas: "CO2", min: 0, max: 1200,
@@ -598,6 +598,7 @@ var CONFIG = {
      {gas} in the wording below is replaced with N2, CO2 or LN. */
   attention: {
     sheetTitle: "Needs attention",
+    alreadySaid: "Already noted: ",
     notePlaceholder: "Low tank, nothing left in storage, etc.",
     linePrefix: "ATTENTION: ",     /* when a note was typed */
     lineBare: "ATTENTION",         /* when it was flagged without a note */
@@ -608,14 +609,26 @@ var CONFIG = {
     roomMark: " ⚠️",
     roomMarkCode: " :warning:",    /* only used when copyStyle is "markup" */
 
-    /* Offered after confirming a tank at or below its alert reading. */
-    emptyTankAsk: "Create an alert for empty {gas}?",
-    emptyTankNote: "Empty {gas}",
+    /* Joins an automatic note to a typed one on the same screen. */
+    join: "; ",
 
-    /* Offered after confirming a storage screen with no full cylinders of a
-       gas left, when at least one empty is sitting there. */
-    noFullAsk: "Create an alert for no full {gas} in storage?",
-    noFullNote: "No full {gas} in storage"
+    /* The notes the readings call for by themselves. Nobody confirms these:
+       they are worked out from the readings every time the message is built,
+       so editing a reading updates them and none of them can be skipped.
+       {gas} becomes N2, CO2 or LN, and {n} a count. */
+    emptyTankNote: "Empty {gas}",
+    noFullNote: "No full {gas} in storage",
+    someEmptyNote: "{n} empty {gas} in storage"
+  },
+
+  /* The ordering list at the end of the message. Built from what the
+     readings say is empty rather than from what anybody remembered to flag,
+     because a list that has to be populated by hand is a list that will be
+     short one cylinder on the day it matters. */
+  order: {
+    heading: "To order",
+    cylinder: "{n}x{gas} to room {room}",
+    ln: "LN to room {room}"
   },
 
   /* Confirming a tank at or below this reading offers an alert. 0 means only
@@ -1086,13 +1099,13 @@ function storageAnswered(a){
 function flagsForStop(si){
   var out = [];
   screensForStop(si).forEach(function(s){
-    if (state.flags[s.id] !== undefined) out.push(state.flags[s.id]);
+    var note = attentionFor(s);
+    if (note !== null) out.push(note);
   });
   return out;
 }
 function attentionLines(si){
   return flagsForStop(si).map(function(note){
-    note = String(note || "").trim();
     return note ? CONFIG.attention.linePrefix + note : CONFIG.attention.lineBare;
   });
 }
@@ -1141,11 +1154,13 @@ function buildMessageLines(){
       }
     } else if (stop.type === "ln"){
       lines.push({ blank:true });
-      lines.push({ head:true, text: pick(stop.title, "LN"), warn: warn });
+      lines.push({ head:true, warn: warn,
+        text: pick(stop.title, "LN") + (stop.number ? " (" + stop.number + ")" : "") });
       lines.push({ text: "Level: " + answerFor(mine[0]) + "%" });
     } else if (stop.type === "ph"){
       lines.push({ blank:true });
-      lines.push({ head:true, text: pick(stop.title, "pH Probe"), warn: warn });
+      lines.push({ head:true, warn: warn,
+        text: pick(stop.title, "pH Probe") + (stop.number ? " (" + stop.number + ")" : "") });
       /* What this visit did. On a week somebody already settled, all this
          person did was check how the probe is stored, so that is all it
          claims. */
@@ -1158,6 +1173,13 @@ function buildMessageLines(){
 
     attentionLines(si).forEach(function(t){ lines.push({ text: t }); });
   });
+
+  var orders = orderLines();
+  if (orders.length){
+    lines.push({ blank:true });
+    lines.push({ head:true, text: CONFIG.order.heading });
+    orders.forEach(function(t){ lines.push({ text: t }); });
+  }
 
   if (CONFIG.footerText){
     lines.push({ blank:true });
@@ -1665,6 +1687,7 @@ function showOverlay(sheet, onCancel, atBottom){
    part of a chain, so the chain can carry on. */
 function openFlagSheet(screen, prefill, onClose){
   var existing = state.flags[screen.id];
+  var autoAlready = autoNotes(screen);
   var ta = h("textarea", {
     class:"note", rows:"3", maxlength:"140",
     placeholder: CONFIG.attention.notePlaceholder, "aria-label":"Note"
@@ -1680,7 +1703,9 @@ function openFlagSheet(screen, prefill, onClose){
 
   showOverlay(h("div", { class:"sheet" }, [
     h("h2", { text: CONFIG.attention.sheetTitle }),
-    h("p", { class:"where", text: screen.heading + " / " + screen.sub }),
+    h("p", { class:"where", text: screen.label || "" }),
+    autoAlready.length ? h("p", { class:"autonote",
+      text: CONFIG.attention.alreadySaid + autoAlready.join(CONFIG.attention.join) }) : null,
     ta,
     h("button", { class:"btn btn-primary", type:"button", onclick: function(){
       state.flags[screen.id] = ta.value.trim();
@@ -1699,17 +1724,21 @@ function openFlagSheet(screen, prefill, onClose){
   setTimeout(function(){ try { ta.focus(); } catch(e){} }, 60);
 }
 
-/* The short yes or no prompt the app raises by itself. */
-function askSheet(question, onYes, onSkip){
-  showOverlay(h("div", { class:"sheet" }, [
-    h("h2", { text: question }),
-    h("button", { class:"btn btn-primary", type:"button", onclick: function(){ closeOverlay(); onYes(); } },
-      [h("span", { class:"chev", html: ICON.warn }), h("span", { text:"Yes" })]),
-    h("button", { class:"btn btn-quiet", type:"button", onclick: function(){ closeOverlay(); onSkip(); } }, "Skip")
-  ]), function(){ closeOverlay(); onSkip(); }, true);
+function fill(text, vars){
+  var out = String(text);
+  for (var k in vars) out = out.split("{" + k + "}").join(String(vars[k]));
+  return out;
 }
+function fillGas(text, gas){ return fill(text, { gas: gas }); }
 
-function fillGas(text, gas){ return String(text).replace("{gas}", gas); }
+/* The gases storage deals in, in the order the message prints them. */
+function storageGasOrder(){
+  var seen = [];
+  CONFIG.storageItems.forEach(function(it){
+    if (seen.indexOf(it.gas) < 0) seen.push(it.gas);
+  });
+  return seen;
+}
 
 /* Readings that are worth offering a flag for, checked when a screen is
    confirmed. The app suggests, it never flags anything on its own, and it
@@ -1735,17 +1764,14 @@ function alertBands(screen){
 
   if (own && own.length) return own;
   if (typeof limit !== "number") return [];
-  return [{
-    atOrBelow: limit,
-    ask: fillGas(CONFIG.attention.emptyTankAsk, gas),
-    note: fillGas(CONFIG.attention.emptyTankNote, gas)
-  }];
+  return [{ atOrBelow: limit, note: fillGas(CONFIG.attention.emptyTankNote, gas) }];
 }
 
-/* Readings that are worth offering a flag for, checked when a screen is
-   confirmed. The app suggests, it never flags anything on its own, and it
-   asks whether or not the screen is already flagged. */
-function pendingAsks(screen){
+/* What the readings flag by themselves. Nobody is asked to confirm these,
+   and they are not stored: they are worked out fresh whenever the message is
+   built, so correcting a reading corrects its note and none of them can be
+   skipped by somebody tapping through. */
+function autoNotes(screen){
   var out = [];
 
   if (screen.kind === "psi" || screen.kind === "ln"){
@@ -1753,27 +1779,67 @@ function pendingAsks(screen){
     var bands = alertBands(screen);
     for (var i = 0; i < bands.length; i++){
       if (typeof bands[i].atOrBelow === "number" && v <= bands[i].atOrBelow){
-        out.push({ ask: bands[i].ask, note: bands[i].note });
+        out.push(bands[i].note);
         break;   /* the first band the reading falls into wins */
       }
     }
 
   } else if (screen.kind === "storage"){
-    /* Only the gases a room stocks on purpose are worth an alert. A room
-       that just happens to be holding a cylinder somebody swapped out is
-       not short of anything. */
     var conf = CONFIG.route[screen.stopIndex].storage || {};
-    var a = answerFor(screen);
-    var counts = storageTally(a);
-    (conf.alertWhenNoneFull || []).forEach(function(gas){
+    var counts = storageTally(answerFor(screen));
+    storageGasOrder().forEach(function(gas){
+      var empty = counts[gas + "|empty"] || 0;
+      if (!empty) return;
+      var full = counts[gas + "|full"] || 0;
       var stocked = (conf.slots || []).some(function(slot){ return slot.gas === gas; });
-      if (!stocked) return;
-      if ((counts[gas + "|full"] || 0) === 0){
-        out.push({ ask: fillGas(CONFIG.attention.noFullAsk, gas),
-                   note: fillGas(CONFIG.attention.noFullNote, gas) });
-      }
+      /* A room that keeps full spares of this gas has run out of them; a
+         room that just happens to be holding one has not run out of
+         anything, so it gets counted instead. */
+      out.push((stocked && full === 0)
+        ? fillGas(CONFIG.attention.noFullNote, gas)
+        : fill(CONFIG.attention.someEmptyNote, { n: empty, gas: gas }));
     });
   }
+  return out;
+}
+
+/* One screen's ATTENTION text: what the readings called for, then whatever
+   somebody typed, joined. null means nothing to say at all; the empty string
+   means flagged by hand with no note. */
+function attentionFor(screen){
+  var parts = autoNotes(screen);
+  var manual = state.flags[screen.id];
+  var typed = (manual === undefined) ? null : String(manual || "").trim();
+  if (typed) parts.push(typed);
+  if (!parts.length) return (typed === null) ? null : "";
+  return parts.join(CONFIG.attention.join);
+}
+
+/* What needs ordering, and where it goes. */
+function orderLines(){
+  var out = [];
+  messageStops().forEach(function(entry){
+    var stop = entry.stop, si = entry.si;
+
+    if (stop.type === "room" && stop.storage){
+      var st = visitScreens(si).filter(function(x){ return x.kind === "storage"; })[0];
+      if (!st) return;
+      var counts = storageTally(answerFor(st));
+      storageGasOrder().forEach(function(gas){
+        var n = counts[gas + "|empty"] || 0;
+        if (n > 0) out.push(fill(CONFIG.order.cylinder, { n: n, gas: gas, room: stop.number }));
+      });
+
+    } else if (stop.type === "ln"){
+      var ln = visitScreens(si)[0];
+      if (!ln) return;
+      var v = answerFor(ln), low = false;
+      alertBands(ln).forEach(function(b){
+        if (typeof b.atOrBelow === "number" && v <= b.atOrBelow) low = true;
+      });
+      if (low) out.push(fill(CONFIG.order.ln, { room: stop.number }));
+    }
+  });
   return out;
 }
 
@@ -1835,14 +1901,7 @@ function currentScreen(){
 function confirmScreen(){
   var screen = currentScreen();
   state.done[screen.id] = true;
-  runAsks(screen, pendingAsks(screen), 0);
-}
-function runAsks(screen, asks, i){
-  if (i >= asks.length){ advanceScreen(); return; }
-  var a = asks[i];
-  askSheet(a.ask,
-    function(){ openFlagSheet(screen, a.note, function(){ runAsks(screen, asks, i + 1); }); },
-    function(){ runAsks(screen, asks, i + 1); });
+  advanceScreen();
 }
 function advanceScreen(){
   if (state.returnToReview){
@@ -1937,7 +1996,7 @@ function infoButton(screen){
   });
 }
 function flagButton(screen){
-  var on = state.flags[screen.id] !== undefined;
+  var on = state.flags[screen.id] !== undefined || autoNotes(screen).length > 0;
   return h("button", {
     class: "flagbtn" + (on ? " on" : ""),
     type: "button",
@@ -2181,7 +2240,7 @@ function screenReview(){
       var v = reviewValue(s);
       list.appendChild(h("button", { class:"item", type:"button",
         onclick: function(){ editScreen(si, idx); } }, [
-        state.flags[s.id] === undefined ? null : h("div", { class:"flag", html: ICON.warnSm }),
+        attentionFor(s) === null ? null : h("div", { class:"flag", html: ICON.warnSm }),
         h("div", { class:"who", text: s.label }),
         h("div", { class:"what" + (v.small ? " small" : ""), text: v.text }),
         h("div", { class:"chev", html: ICON.chev })
