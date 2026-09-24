@@ -99,7 +99,35 @@ button{font:inherit;color:inherit;margin:0;touch-action:manipulation;cursor:poin
 .menuhead{flex:none;display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:12px 18px 0}
 .menuhead h1{margin:0;font-size:30px;font-weight:800;letter-spacing:-.03em}
 .menumeta{font-size:13px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
-.menuhint{flex:none;padding:4px 18px 10px;font-size:15px;color:var(--muted)}
+.menuhint{flex:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px 14px 10px 18px;font-size:15px;color:var(--muted)}
+.idchip{
+  flex:none;border:1px solid var(--line);background:var(--surface);color:var(--text);
+  border-radius:999px;padding:6px 13px;font-size:14px;font-weight:700;min-height:36px;
+}
+.idchip:active{background:var(--surface-2)}
+.roster{display:flex;flex-direction:column;gap:10px}
+.person{
+  width:100%;display:flex;align-items:center;gap:12px;text-align:left;min-height:66px;
+  background:var(--surface);border:1px solid var(--line);border-radius:16px;
+  padding:12px 14px;box-shadow:var(--shadow);
+}
+.person:active{background:var(--surface-2)}
+.person.on{border-color:var(--accent)}
+.personemoji{flex:none;width:32px;font-size:25px;line-height:1;text-align:center}
+.personname{flex:1;min-width:0;font-size:19px;font-weight:800;letter-spacing:.05em}
+.personcount{font-size:15px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+.newuser{
+  width:100%;min-height:62px;border-radius:16px;border:1px dashed var(--line);
+  background:transparent;color:var(--muted);font-size:17px;font-weight:700;
+}
+.newuser:active{background:var(--surface-2)}
+.bigfield{
+  width:100%;padding:16px;border-radius:16px;border:1px solid var(--line);
+  background:var(--surface);color:var(--text);font:inherit;font-size:30px;font-weight:800;
+  text-align:center;letter-spacing:.12em;-webkit-user-select:text;user-select:text;
+}
+.bigfield:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.bigfield.emoji{font-size:40px;letter-spacing:0;font-weight:400}
 .menu{
   flex:1;min-height:0;display:grid;padding:0 14px;gap:10px;
   grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));
@@ -182,6 +210,27 @@ button{font:inherit;color:inherit;margin:0;touch-action:manipulation;cursor:poin
 .cbtn[disabled]{opacity:.35}
 .count{min-width:48px;text-align:center;font-size:30px;font-weight:800;font-variant-numeric:tabular-nums}
 .hint{padding:0 18px 8px;font-size:15px;color:var(--muted);line-height:1.45}
+.slotrow{padding:0 0 14px}
+.slotname{font-size:15px;font-weight:700;color:var(--muted);margin:0 2px 7px}
+.seg{display:flex;gap:8px}
+.segbtn{
+  flex:1;min-height:58px;border-radius:15px;border:1px solid var(--line);background:var(--surface);
+  color:var(--text);font-size:16px;font-weight:700;box-shadow:var(--shadow);
+  display:inline-flex;align-items:center;justify-content:center;
+}
+.segbtn:active{background:var(--surface-2);transform:translateY(1px)}
+.segbtn.on{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.segbtn.gone.on{background:var(--muted);color:var(--surface)}
+.segbtn.segx{flex:0 0 64px;color:var(--muted)}
+.storenone{padding:6px 2px 14px;font-size:16px;color:var(--muted)}
+.lastread{flex:none;text-align:center;font-size:13.5px;font-weight:600;color:var(--muted);padding:2px 18px 4px;font-variant-numeric:tabular-nums}
+.lognote{margin-top:10px;font-size:13.5px;color:var(--muted);text-align:center;line-height:1.4}
+.addbtn{
+  width:100%;min-height:54px;border-radius:15px;border:1px dashed var(--line);
+  background:transparent;color:var(--muted);font-size:16px;font-weight:700;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+}
+.addbtn:active{background:var(--surface-2)}
 
 /* ---------- pH screen ---------- */
 .center{flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;padding:8px 20px;min-height:0}
@@ -356,7 +405,24 @@ var CONFIG = {
 
     {
       type: "room", name: "Secondary", tile: "Secondary", number: "3326",
-      menu: 2, storage: true,
+      menu: 2,
+      /* The cylinders that live outside this room. One line per physical
+         cylinder: the screen asks about each one by name, so nobody counts
+         anything. Add a cylinder here and it is asked about from then on.
+
+         alertWhenNoneFull lists the gases whose whole point is to be a full
+         spare. When none of that gas is left full, the app offers an alert.
+         Secondary's stock is exactly that, so both gases are listed: one
+         empty CO2 still leaves a full one, two does not. */
+      storage: {
+        slots: [
+          { gas: "N2",  label: "N₂"      },
+          { gas: "CO2", label: "CO₂ one" },
+          { gas: "CO2", label: "CO₂ two" }
+        ],
+        allowExtra: true,
+        alertWhenNoneFull: ["N2", "CO2"]
+      },
       tanks: [
         { label: "N2 Tank 1",  gas: "N2",  min: 0, max: 3000,
           prompt: "Record the psi for the N₂ tank." },
@@ -382,7 +448,15 @@ var CONFIG = {
 
     {
       type: "room", name: "Primary", tile: "Primary", number: "3343",
-      menu: 4, storage: true,
+      menu: 4,
+      /* Primary normally has nothing out there. What does turn up is usually
+         a cylinder that was just swapped out, so an empty here is ordinary
+         and worth no alert: alertWhenNoneFull is deliberately empty. */
+      storage: {
+        slots: [],
+        allowExtra: true,
+        alertWhenNoneFull: []
+      },
       tanks: [
         { label: "CO2 Tank 1", gas: "CO2", min: 0, max: 1200,
           prompt: "Record the psi for CO₂ Tank 1." },
@@ -440,20 +514,31 @@ var CONFIG = {
   pctFineStep: 1,    /* the two small buttons under the LN slider */
 
   /* The sentence at the top of a cylinder counting screen. */
-  storagePrompt: "Cylinders in storage for this room.",
+  storagePrompt: "Cylinders in storage for this room:",
 
-  /* The four counters on every storage screen, in the order they are
-     listed on screen and in the Slack message.
-       key    internal name, must stay unique
-       label  what the screen calls it
+  /* The kinds of cylinder that can be in storage, in the order they are
+     printed in the Slack message. These are also the buttons offered by
+     "Add a cylinder".
+       label  what the add button calls it
        gas    what the Slack message calls it
        state  "full" or "empty", printed in parentheses */
   storageItems: [
-    { key: "n2Full",   label: "N2 full",   gas: "N2",  state: "full"  },
-    { key: "n2Empty",  label: "N2 empty",  gas: "N2",  state: "empty" },
-    { key: "co2Full",  label: "CO2 full",  gas: "CO2", state: "full"  },
-    { key: "co2Empty", label: "CO2 empty", gas: "CO2", state: "empty" }
+    { label: "N₂ full",   gas: "N2",  state: "full"  },
+    { label: "N₂ empty",  gas: "N2",  state: "empty" },
+    { label: "CO₂ full",  gas: "CO2", state: "full"  },
+    { label: "CO₂ empty", gas: "CO2", state: "empty" }
   ],
+
+  /* Wording on the storage screen itself. */
+  storageWords: {
+    full: "Full",
+    empty: "Empty",
+    missing: "Missing",
+    none: "Nothing in storage.",
+    add: "Add a cylinder",
+    addTitle: "What is out there?",
+    unanswered: "Say what each cylinder is first."
+  },
 
   /* The pH probe.
 
@@ -549,6 +634,49 @@ var CONFIG = {
      comes through untouched. */
   blankLineChar: " ",
 
+  /* The who-is-checking screen. Everyone picks themselves once on a phone
+     and Tankly remembers; the chip on the room menu switches. Nobody is
+     checked against anything, so a wrong name costs nothing worse than a
+     wrong name. */
+  people: {
+    title: "Who is checking?",
+    add: "+ New user",
+    initialsPrompt: "What are your initials?",
+    initialsBad: "Initials first.",
+    emojiPrompt: "Pick an emoji.",
+    emojiHint: "So two people with the same initials can tell each other apart.",
+    emojiBad: "One emoji, and nothing but an emoji.",
+    next: "Next",
+    done: "Done",
+    skip: "Skip"
+  },
+
+  /* The very last line of the message, which needs the shared log to mean
+     anything. Set statsLabel to "" to drop the line entirely. */
+  statsLabel: "Tank Checks",
+  medals: ["🥇", "🥈", "🥉"],
+  streakMark: "🔥",
+
+  /* THE SHARED LOG, optional.
+
+     Paste the Apps Script web app URL here, the one ending in /exec, and
+     Tankly will read the last check when it opens and write this one when
+     you copy the message. That is what puts "last: 850 psi on 9/21" on the
+     screens and lets the pH week be shared between phones rather than
+     remembered on each one.
+
+     Leave it as "" and nothing about the app changes. Everything to do with
+     the log is best effort: a check is never held up by the network, never
+     fails because of it, and works start to finish with no signal at all. */
+  logUrl: "https://script.google.com/macros/s/AKfycbyBu9Z-5ouUtVPrHzMH1juuw2beUnUtNmOiohcPbq2JxMcCIhPVq6myCQL0ARbcSYn-/exec",
+
+  /* Apps Script is slow and uneven: measured round trips on this one ran
+     from 3 to 15 seconds, and it occasionally answers with a holding page
+     instead of JSON. Nothing waits on it, so the timeout is generous on
+     purpose. Cutting it short does not make the app faster, it just makes
+     the readings and the tallies go missing more often. */
+  logTimeoutMs: 20000,
+
   /* Vibration in milliseconds when a slider crosses a snap point.
      Set to 0 to turn the haptic tick off. Android only, iOS ignores it. */
   hapticMs: 8
@@ -594,6 +722,7 @@ var ICON = {
   check: svg('<path d="M4 12.5l5.5 5.5L20 6"/>', 26, 3),
   plus:  svg('<path d="M12 5v14M5 12h14"/>', 26, 2.8),
   minus: svg('<path d="M5 12h14"/>', 26, 2.8),
+  close: svg('<path d="M6 6l12 12M18 6L6 18"/>', 22, 2.4),
   copy:  svg('<rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V5.5A1.5 1.5 0 0 1 6.5 4H15"/>', 24, 2.2),
   info:  svg('<circle cx="12" cy="12" r="9"/><path d="M12 11.2v5"/><path d="M12 7.7h.01"/>', 24, 2.2),
   warn:  svg('<path d="M12 8v5M12 17h.01"/><path d="M10.3 3.9L2.6 17.4A2 2 0 0 0 4.3 20.4h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>', 24, 2.2),
@@ -717,6 +846,12 @@ function doneCount(){
 }
 function roomsLeft(){ return CONFIG.route.length - doneCount(); }
 
+/* How a gas is written on screen, from the same list the menu counts use. */
+function gasLabel(gas){
+  var found = (CONFIG.tileGases || []).filter(function(g){ return g.gas === gas; })[0];
+  return found ? found.label : gas;
+}
+
 /* The CO2 and N2 counts under a room's name on the menu. Running tanks
    only: cylinders in storage are not counted here. */
 function tileStats(stop){
@@ -725,7 +860,7 @@ function tileStats(stop){
   (CONFIG.tileGases || []).forEach(function(g){
     var n = 0;
     (stop.tanks || []).forEach(function(t){ if (t.gas === g.gas) n++; });
-    if (n > 0) out.push(g.label + " " + n);
+    if (n > 0) out.push(g.label + ": " + n);
   });
   return out;
 }
@@ -754,16 +889,22 @@ function defaultValue(screen){
   if (typeof screen.start === "number") return snapTo(screen.start, screen.step, screen.min, screen.max);
   return snapTo((screen.min + screen.max)/2, screen.step, screen.min, screen.max);
 }
-function emptyStorage(){
-  var o = {};
-  CONFIG.storageItems.forEach(function(it){ o[it.key] = 0; });
-  return o;
+/* A storage answer is one cell per cylinder. The cells that come from
+   CONFIG are marked fixed and are always asked about; anything added on the
+   day is appended and can be removed again. */
+function emptyStorage(stop){
+  var conf = (stop && stop.storage) || {};
+  return {
+    cells: (conf.slots || []).map(function(slot){
+      return { gas: slot.gas, label: slot.label, state: null, fixed: true };
+    })
+  };
 }
 function answerFor(screen){
   var a = state.answers[screen.id];
   if (a !== undefined && a !== null) return a;
   if (screen.kind === "psi" || screen.kind === "ln") return defaultValue(screen);
-  if (screen.kind === "storage") return emptyStorage();
+  if (screen.kind === "storage") return emptyStorage(CONFIG.route[screen.stopIndex]);
   if (screen.kind === "phcal") return { outcome: "already" };
   if (screen.kind === "phstore") return { ok: true };
   return null;
@@ -779,7 +920,9 @@ var state = {
   flags: {},           /* screen id -> attention note, "" when none was typed */
   done: {},            /* screen id -> true once confirmed */
   returnToReview: false,
-  original: null       /* value to restore if an edit from review is cancelled */
+  original: null,      /* value to restore if an edit from review is cancelled */
+  stats: null,         /* the last line, frozen once the message is first built */
+  checkId: null        /* this check's own id, so a resend cannot double up */
 };
 var saved = null;      /* a restorable session found in localStorage */
 
@@ -797,11 +940,16 @@ function weekKey(d){
 
 /* The pH calibration is weekly, so it is kept apart from the check itself,
    which is thrown away nightly. */
+/* Settled by this phone, or by whoever logged the last check. The local
+   record is what keeps this working with no signal. */
 function phWeekDone(){
+  var wk = weekKey();
   try {
     var o = JSON.parse(localStorage.getItem(PH_KEY) || "null");
-    return (o && o.week === weekKey()) ? o : null;
-  } catch(e){ return null; }
+    if (o && o.week === wk) return o;
+  } catch(e){}
+  if (lastCheck && lastCheck.ph && lastCheck.ph.week === wk) return lastCheck.ph;
+  return null;
 }
 function setPhWeekDone(outcome){
   try {
@@ -850,21 +998,28 @@ document.addEventListener("visibilitychange", function(){ if (document.hidden) s
 
 
 /* ---------- the Slack message ---------- */
-function storageText(counts){
-  var parts = [];
+/* A cylinder marked missing is not there, so it is counted as nothing. */
+function storageTally(a){
+  var counts = {};
+  ((a && a.cells) || []).forEach(function(c){
+    if (!c.state || c.state === "missing") return;
+    var k = c.gas + "|" + c.state;
+    counts[k] = (counts[k] || 0) + 1;
+  });
+  return counts;
+}
+function storageText(a){
+  var counts = storageTally(a), parts = [];
   CONFIG.storageItems.forEach(function(it){
-    var n = (counts && counts[it.key]) || 0;
+    var n = counts[it.gas + "|" + it.state] || 0;
     if (n > 0) parts.push(n + " " + it.gas + " (" + it.state + ")");
   });
   return parts.length ? parts.join(", ") : "none";
 }
-/* Which gases the storage counters cover, in the order they are listed. */
-function storageGases(){
-  var seen = [];
-  CONFIG.storageItems.forEach(function(it){
-    if (seen.indexOf(it.gas) < 0) seen.push(it.gas);
-  });
-  return seen;
+function storageAnswered(a){
+  var cells = (a && a.cells) || [];
+  for (var i = 0; i < cells.length; i++) if (!cells[i].state) return false;
+  return true;
 }
 /* Every attention note raised anywhere in one stop, in walking order. */
 function flagsForStop(si){
@@ -947,6 +1102,14 @@ function buildMessageLines(){
     lines.push({ blank:true });
     lines.push({ text: CONFIG.footerText });
     if (CONFIG.appUrl) lines.push({ text: CONFIG.appUrl });
+  }
+
+  /* Worked out once and then left alone, so the line that was read on screen
+     is the line that gets copied, and a second copy does not count twice. */
+  if (state.stats === null || state.stats === undefined) state.stats = statsLine();
+  if (state.stats){
+    lines.push({ blank:true });
+    lines.push({ text: state.stats });
   }
 
   return lines;
@@ -1138,6 +1301,263 @@ function makeSlider(opts){
 }
 
 
+/* ---------- the shared log ----------
+   Optional, and deliberately unable to get in the way. Every call gives up
+   after a few seconds, every failure is swallowed, and a check that could
+   not be sent is kept and tried again next time the app opens. */
+var LOG_LAST_KEY    = "tankly.last.v1";
+var LOG_QUEUE_KEY   = "tankly.queue.v1";
+var LOG_SUMMARY_KEY = "tankly.summary.v1";
+var ME_KEY          = "tankly.me.v1";
+var PEOPLE_KEY      = "tankly.people.v1";
+var lastCheck = null;        /* the most recent check anybody published */
+var summary   = null;        /* who has published, how often, and the run at the end */
+var me        = null;        /* who is holding the phone */
+var checkSent = false;
+
+function logEnabled(){
+  return !!(CONFIG.logUrl && CONFIG.logUrl.indexOf("http") === 0);
+}
+function readCache(key){
+  try { return JSON.parse(localStorage.getItem(key) || "null"); } catch(e){ return null; }
+}
+function writeCache(key, value){
+  try {
+    if (value === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, JSON.stringify(value));
+  } catch(e){}
+}
+
+function logFetch(opts){
+  if (!logEnabled()) return Promise.reject(new Error("log is off"));
+  var ctrl = window.AbortController ? new AbortController() : null;
+  var timer = setTimeout(function(){ if (ctrl) ctrl.abort(); }, CONFIG.logTimeoutMs || 6000);
+  var init = { method: opts.method || "GET" };
+  if (ctrl) init.signal = ctrl.signal;
+  if (opts.body){
+    /* text/plain on purpose. An Apps Script web app does not answer the CORS
+       preflight that application/json would set off, so the request has to
+       stay a simple one and be parsed as JSON at the other end. */
+    init.headers = { "Content-Type": "text/plain;charset=utf-8" };
+    init.body = JSON.stringify(opts.body);
+  }
+  return fetch(CONFIG.logUrl, init).then(function(r){
+    clearTimeout(timer);
+    return r.text();
+  }, function(err){
+    clearTimeout(timer);
+    throw err;
+  }).then(function(text){
+    /* a throttled or unhappy Apps Script answers with an HTML page, which is
+       a failed call rather than a crash */
+    try { return JSON.parse(text); }
+    catch(e){ throw new Error("not json"); }
+  });
+}
+
+/* ---- who is checking ---- */
+function loadMe(){ me = readCache(ME_KEY); }
+function setMe(person){
+  me = person;
+  writeCache(ME_KEY, person);
+  /* remembered here too, so a new face is on the list before their first
+     publish puts them on the sheet */
+  var local = readCache(PEOPLE_KEY) || [];
+  var known = local.filter(function(x){ return x.name === person.name; }).length;
+  if (!known){ local.push(person); writeCache(PEOPLE_KEY, local); }
+}
+function nameInitials(name){ return String(name).split(" ")[0] || String(name); }
+function nameEmoji(name){
+  var bits = String(name).split(" ");
+  return bits.length > 1 ? bits.slice(1).join(" ") : "";
+}
+/* The sheet's list, most recent publisher first, with anyone made on this
+   phone who has not published yet on the end. */
+function roster(){
+  var out = [], seen = {};
+  ((summary && summary.users) || []).forEach(function(u){
+    if (seen[u.name]) return;
+    seen[u.name] = true;
+    out.push({ name: u.name, count: u.count, initials: nameInitials(u.name), emoji: nameEmoji(u.name) });
+  });
+  (readCache(PEOPLE_KEY) || []).forEach(function(x){
+    if (seen[x.name]) return;
+    seen[x.name] = true;
+    out.push({ name: x.name, count: 0, initials: x.initials, emoji: x.emoji });
+  });
+  return out;
+}
+/* One emoji, and nothing but. Letters, digits and two of anything are out. */
+function isSingleEmoji(str){
+  var t = String(str || "").trim();
+  if (!t) return false;
+  var graphemes;
+  try {
+    if (window.Intl && Intl.Segmenter){
+      graphemes = Array.from(new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(t)).length;
+    } else {
+      graphemes = Array.from(t).length > 4 ? 9 : 1;
+    }
+  } catch(e){ graphemes = 1; }
+  if (graphemes !== 1) return false;
+  try { return /\p{Extended_Pictographic}/u.test(t); }
+  catch(e){ return !/^[A-Za-z0-9\s\-_.,!?]+$/.test(t); }
+}
+
+/* The last line of the message: how many checks, where that puts you, and a
+   run of two or more. The check being copied is counted in, because the
+   sheet cannot know about it until a moment after this is written. */
+function statsLine(){
+  if (!me || !summary || !CONFIG.statsLabel) return "";
+  var counts = {};
+  (summary.users || []).forEach(function(u){ counts[u.name] = u.count; });
+  counts[me.name] = (counts[me.name] || 0) + 1;
+
+  var mine = counts[me.name];
+  var all = Object.keys(counts).map(function(k){ return counts[k]; })
+                  .sort(function(a, b){ return b - a; });
+  var rank = all.indexOf(mine) + 1;                 /* a tie takes the better place */
+  var medal = (CONFIG.medals || [])[rank - 1] || "";
+
+  var parts = [CONFIG.statsLabel + ": " + mine, "#" + rank + (medal ? " " + medal : "")];
+  var streak = (summary.lastBy === me.name) ? (summary.lastStreak || 0) + 1 : 1;
+  if (streak > 1) parts.push(streak + " " + CONFIG.streakMark);
+  return parts.join(" | ");
+}
+
+/* What the last check read, for the hint under a reading. */
+function lastReading(id){
+  if (!lastCheck || !lastCheck.readings) return null;
+  for (var i = 0; i < lastCheck.readings.length; i++){
+    if (lastCheck.readings[i].id === id){
+      return { text: lastCheck.readings[i].text, date: lastCheck.date };
+    }
+  }
+  return null;
+}
+function lastReadingRow(screen){
+  var last = lastReading(screen.id);
+  if (!last || !last.text) return null;
+  return h("div", { class:"lastread", text: "Last: " + last.text + " · " + last.date });
+}
+
+function loadLastCheck(tries){
+  lastCheck = readCache(LOG_LAST_KEY);
+  summary   = readCache(LOG_SUMMARY_KEY);
+  if (!logEnabled()) return;
+  logFetch({}).then(function(res){
+    if (!res || !res.ok) return;
+    summary = { users: res.users || [], lastBy: res.lastBy || "", lastStreak: res.lastStreak || 0 };
+    writeCache(LOG_SUMMARY_KEY, summary);
+    if (res.last){
+      lastCheck = res.last;
+      writeCache(LOG_LAST_KEY, lastCheck);
+    }
+    /* only redraw somewhere harmless: never under somebody's thumb */
+    if (state.phase === "home" || state.phase === "menu" || state.phase === "who") render();
+  }, function(){
+    /* one more go, since a slow answer is the common kind of failure here */
+    if (!tries) setTimeout(function(){ loadLastCheck(1); }, 2500);
+  });
+}
+
+function checkPayload(){
+  var readings = [];
+  CONFIG.route.forEach(function(stop, si){
+    visitScreens(si).forEach(function(sc){
+      var a = answerFor(sc);
+      var entry = { id: sc.id, label: stop.name + " " + sc.label };
+      if (sc.kind === "psi" || sc.kind === "ln"){
+        entry.value = a; entry.text = a + " " + sc.unit;
+      } else if (sc.kind === "storage"){
+        entry.value = storageText(a); entry.text = entry.value;
+      } else if (sc.kind === "phcal"){
+        entry.value = (a && a.outcome) || ""; entry.text = entry.value;
+      } else if (sc.kind === "phstore"){
+        entry.value = "stored"; entry.text = "stored correctly";
+      }
+      readings.push(entry);
+    });
+  });
+  var flags = [];
+  Object.keys(state.flags).forEach(function(id){
+    flags.push({ id: id, note: state.flags[id] });
+  });
+  var cal = state.answers["ph|cal"];
+  if (!state.checkId){
+    state.checkId = dayKey() + "-" + Math.random().toString(36).slice(2, 10);
+  }
+  return {
+    type: "check",
+    /* A send that times out may already have been written at the other end.
+       This is what lets the retry be ignored rather than doubled up. */
+    id: state.checkId,
+    user: me ? { initials: me.initials, emoji: me.emoji, name: me.name } : null,
+    at: new Date().toISOString(),
+    date: todayMD(),
+    day: dayKey(),
+    week: weekKey(),
+    ph: { outcome: (cal && cal.outcome) || "", week: phWeekDone() ? weekKey() : "" },
+    readings: readings,
+    flags: flags,
+    message: buildMessage()
+  };
+}
+
+/* Fold a check we just published into the tallies we are holding, so a
+   second check in the same session counts from the right numbers instead of
+   from whatever the sheet said when the app opened. */
+function noteOwnPublish(payload){
+  if (!payload || !payload.user || !payload.user.name) return;
+  var name = payload.user.name;
+  if (!summary) summary = { users: [], lastBy: "", lastStreak: 0 };
+
+  var users = (summary.users || []).map(function(u){
+    return { name: u.name, count: u.count, lastAt: u.lastAt };
+  });
+  var mine = null;
+  users.forEach(function(u){ if (u.name === name) mine = u; });
+  if (mine){ mine.count++; mine.lastAt = payload.at; }
+  else users.push({ name: name, count: 1, lastAt: payload.at });
+  users.sort(function(a, b){ return a.lastAt < b.lastAt ? 1 : (a.lastAt > b.lastAt ? -1 : 0); });
+
+  summary = {
+    users: users,
+    /* read before lastBy is overwritten just below */
+    lastStreak: (summary.lastBy === name) ? (summary.lastStreak || 0) + 1 : 1,
+    lastBy: name
+  };
+  writeCache(LOG_SUMMARY_KEY, summary);
+}
+
+function sendCheck(){
+  if (!logEnabled() || checkSent) return;
+  var payload = checkPayload();
+  checkSent = true;
+  writeCache(LOG_QUEUE_KEY, payload);      /* so a failure is not lost */
+  logFetch({ method:"POST", body: payload }).then(function(res){
+    if (res && res.ok){
+      writeCache(LOG_QUEUE_KEY, null);
+      lastCheck = payload;
+      writeCache(LOG_LAST_KEY, payload);
+      noteOwnPublish(payload);
+      if (state.phase === "output") render();
+    } else {
+      checkSent = false;
+    }
+  }, function(){ checkSent = false; });
+}
+
+/* A check that could not be sent goes out next time the app opens. */
+function flushQueue(){
+  var queued = readCache(LOG_QUEUE_KEY);
+  if (!queued || !logEnabled()) return;
+  logFetch({ method:"POST", body: queued }).then(function(res){
+    if (res && res.ok) writeCache(LOG_QUEUE_KEY, null);
+  }, function(){});
+}
+
+
 /* ---------- the attention flag ---------- */
 var overlay = null;
 function overlayKey(e){
@@ -1255,16 +1675,16 @@ function pendingAsks(screen){
     }
 
   } else if (screen.kind === "storage"){
-    var counts = answerFor(screen);
-    storageGases().forEach(function(gas){
-      var full = 0, empty = 0;
-      CONFIG.storageItems.forEach(function(it){
-        if (it.gas !== gas) return;
-        var n = (counts && counts[it.key]) || 0;
-        if (it.state === "full") full += n; else empty += n;
-      });
-      /* nothing full left, with empties sitting there to prove the slot is used */
-      if (full === 0 && empty > 0){
+    /* Only the gases a room stocks on purpose are worth an alert. A room
+       that just happens to be holding a cylinder somebody swapped out is
+       not short of anything. */
+    var conf = CONFIG.route[screen.stopIndex].storage || {};
+    var a = answerFor(screen);
+    var counts = storageTally(a);
+    (conf.alertWhenNoneFull || []).forEach(function(gas){
+      var stocked = (conf.slots || []).some(function(slot){ return slot.gas === gas; });
+      if (!stocked) return;
+      if ((counts[gas + "|full"] || 0) === 0){
         out.push({ ask: fillGas(CONFIG.attention.noFullAsk, gas),
                    note: fillGas(CONFIG.attention.noFullNote, gas) });
       }
@@ -1276,6 +1696,7 @@ function pendingAsks(screen){
 /* ---------- navigation ---------- */
 function startFresh(){
   closeOverlay();
+  checkSent = false;
   clearSaved();
   state.answers = {};
   state.flags = {};
@@ -1284,7 +1705,10 @@ function startFresh(){
   state.screenIndex = 0;
   state.returnToReview = false;
   state.original = null;
+  state.stats = null;
+  state.checkId = null;
   state.phase = "menu";
+  loadLastCheck();     /* catch up on anything published since we opened */
   saveNow();
   render();
 }
@@ -1483,6 +1907,7 @@ function screenSlider(screen){
   return h("div", { class:"screen" }, [
     promptRow(screen),
     infoBubble(screen),
+    lastReadingRow(screen),
     h("div", { class:"readout" }, [readNum, h("div", { class:"unit", text: screen.unit })]),
     wrap,
     h("div", { class:"controls" }, [
@@ -1498,38 +1923,95 @@ function screenSlider(screen){
 }
 
 function screenStorage(screen){
-  var counts = JSON.parse(JSON.stringify(answerFor(screen)));
-  state.answers[screen.id] = counts;
+  var stop = CONFIG.route[screen.stopIndex];
+  var conf = stop.storage || {};
+  var words = CONFIG.storageWords;
+
+  /* work on a copy, and rebuild it if CONFIG's slots have moved on */
+  var answer = JSON.parse(JSON.stringify(answerFor(screen)));
+  var want = (conf.slots || []).length;
+  var fixed = (answer.cells || []).filter(function(c){ return c.fixed; });
+  if (fixed.length !== want){
+    var fresh = emptyStorage(stop);
+    fresh.cells = fresh.cells.concat((answer.cells || []).filter(function(c){ return !c.fixed; }));
+    answer = fresh;
+  }
+  state.answers[screen.id] = answer;
   save();
 
-  var rows = h("div", { class:"rows" });
-  CONFIG.storageItems.forEach(function(it){
-    var num = h("div", { class:"count", text: String(counts[it.key] || 0), "aria-live":"polite" });
-    var minus = h("button", { class:"cbtn", type:"button", "aria-label":"one fewer " + it.label, html: ICON.minus });
-    var plus  = h("button", { class:"cbtn", type:"button", "aria-label":"one more " + it.label, html: ICON.plus });
-    function set(n){
-      if (n < 0) n = 0;
-      counts[it.key] = n;
-      num.textContent = String(n);
-      minus.disabled = (n === 0);
-      state.answers[screen.id] = counts;
-      save();
+  var body = h("div", { class:"rows" });
+
+  function redraw(){
+    state.answers[screen.id] = answer;
+    save();
+    render();
+  }
+
+  function slotRow(cell, i){
+    function pickState(v){
+      cell.state = (cell.state === v) ? null : v;
       buzz();
+      redraw();
     }
-    minus.disabled = (counts[it.key] || 0) === 0;
-    minus.addEventListener("click", function(){ set((counts[it.key]||0) - 1); });
-    plus.addEventListener("click", function(){ set((counts[it.key]||0) + 1); });
-    rows.appendChild(h("div", { class:"row" }, [
-      h("div", { class:"label", text: it.label }),
-      h("div", { class:"counter" }, [minus, num, plus])
-    ]));
-  });
+    var choices = [
+      h("button", { class:"segbtn" + (cell.state === "full" ? " on" : ""), type:"button",
+        onclick: function(){ pickState("full"); } }, words.full),
+      h("button", { class:"segbtn" + (cell.state === "empty" ? " on" : ""), type:"button",
+        onclick: function(){ pickState("empty"); } }, words.empty)
+    ];
+    if (cell.fixed){
+      choices.push(h("button", { class:"segbtn gone" + (cell.state === "missing" ? " on" : ""), type:"button",
+        onclick: function(){ pickState("missing"); } }, words.missing));
+    } else {
+      choices.push(h("button", { class:"segbtn segx", type:"button", "aria-label":"Remove this cylinder",
+        html: ICON.close, onclick: function(){
+          answer.cells.splice(i, 1);
+          buzz();
+          redraw();
+        }}));
+    }
+    return h("div", { class:"slotrow" }, [
+      h("div", { class:"slotname", text: cell.label || cell.gas }),
+      h("div", { class:"seg" }, choices)
+    ]);
+  }
+
+  (answer.cells || []).forEach(function(cell, i){ body.appendChild(slotRow(cell, i)); });
+
+  if (!(answer.cells || []).length){
+    body.appendChild(h("div", { class:"storenone", text: words.none }));
+  }
+
+  if (conf.allowExtra){
+    body.appendChild(h("button", { class:"addbtn", type:"button", onclick: function(){
+      /* one tap per kind, straight off the list the message already knows */
+      var buttons = CONFIG.storageItems.map(function(it){
+        return h("button", { class:"btn", type:"button", onclick: function(){
+          closeOverlay();
+          answer.cells.push({ gas: it.gas, label: gasLabel(it.gas), state: it.state, fixed: false });
+          buzz();
+          redraw();
+        }}, it.label);
+      });
+      buttons.push(h("button", { class:"btn btn-quiet", type:"button", onclick: closeOverlay }, "Cancel"));
+      showOverlay(h("div", { class:"sheet" },
+        [h("h2", { text: words.addTitle })].concat(buttons)), closeOverlay, true);
+    }}, [h("span", { class:"chev", html: ICON.plus }), h("span", { text: words.add })]));
+  }
+
+  var ready = storageAnswered(answer);
+  var confirm = ready
+    ? confirmButton()
+    : h("button", { class:"btn btn-blocked", type:"button",
+        onclick: function(){ toast(words.unanswered); } },
+        [h("span", { text: state.returnToReview ? "Save" : "Confirm" })]);
 
   return h("div", { class:"screen" }, [
     promptRow(screen),
     infoBubble(screen),
-    h("div", { class:"scroll" }, rows),
-    h("div", { class:"controls" }, [confirmButton()])
+    lastReadingRow(screen),
+    h("div", { class:"scroll" }, body),
+    h("div", { class:"controls" }, [confirm])
   ]);
 }
 
@@ -1670,10 +2152,23 @@ function screenOutput(){
   var lines = buildMessageLines();
   var pre = messageBox(lines);
 
+  /* Nothing reaches the sheet until the message has actually been copied:
+     that is the moment a check becomes something other people will read. */
+  var logNote = null;
+  if (logEnabled() && (checkSent || readCache(LOG_QUEUE_KEY))){
+    logNote = h("div", { class:"lognote", text: readCache(LOG_QUEUE_KEY)
+      ? "Not saved to the sheet yet. Tankly will try again next time it opens."
+      : "Saved to the sheet." });
+  }
+
   var copyBtn = h("button", { class:"btn btn-primary", type:"button", onclick: function(){
     copyMessage(lines).then(function(ok){
-      if (ok) toast("Copied. Paste it into Slack.");
-      else toast("Copy blocked. Press and hold the message to select it.");
+      if (ok){
+        toast("Copied. Paste it into Slack.");
+        sendCheck();
+      } else {
+        toast("Copy blocked. Press and hold the message to select it.");
+      }
     });
   }}, [h("span", { class:"chev", html: ICON.copy }), h("span", { text:"Copy" })]);
 
@@ -1706,11 +2201,130 @@ function screenOutput(){
         h("h1", { text:"Slack message" }),
         h("p", { text:"Copy this into the lab channel." })
       ]),
-      h("div", { class:"scroll" }, h("div", { class:"pad" }, pre)),
+      h("div", { class:"scroll" }, h("div", { class:"pad" }, [pre, logNote])),
       h("div", { class:"controls" }, [copyBtn, newBtn])
     ])
   ]);
 }
+
+/* ---------- who is checking ---------- */
+var draft = { initials: "", emoji: "" };
+
+function screenWho(){
+  var list = h("div", { class:"roster" });
+
+  roster().forEach(function(person){
+    list.appendChild(h("button", {
+      class: "person" + (me && me.name === person.name ? " on" : ""),
+      type: "button",
+      onclick: function(){
+        setMe({ initials: person.initials, emoji: person.emoji, name: person.name });
+        state.phase = "home";
+        render();
+      }
+    }, [
+      h("div", { class:"personemoji", text: person.emoji || "" }),
+      h("div", { class:"personname", text: person.initials }),
+      person.count ? h("div", { class:"personcount", text: String(person.count) }) : null
+    ]));
+  });
+
+  list.appendChild(h("button", { class:"newuser", type:"button", onclick: function(){
+    draft = { initials: "", emoji: "" };
+    state.phase = "newinitials";
+    render();
+  }}, CONFIG.people.add));
+
+  return h("div", { class:"app" }, [
+    h("div", { class:"menuhead" }, [h("h1", { text: CONFIG.appTitle })]),
+    h("div", { class:"menuhint" }, [h("span", { text: CONFIG.people.title })]),
+    h("div", { class:"scroll" }, h("div", { class:"pad" }, list)),
+    me ? h("div", { class:"controls" }, [
+      h("button", { class:"btn btn-quiet", type:"button",
+        onclick: function(){ state.phase = "home"; render(); } }, "Cancel")
+    ]) : null
+  ]);
+}
+
+function screenNewInitials(){
+  var field = h("input", {
+    class:"bigfield", type:"text", maxlength:"4", autocomplete:"off",
+    autocapitalize:"characters", spellcheck:"false", "aria-label":"Your initials"
+  });
+  field.value = draft.initials;
+
+  function go(){
+    if (!draft.initials){ toast(CONFIG.people.initialsBad); return; }
+    state.phase = "newemoji";
+    render();
+  }
+  var next = h("button", { class:"btn btn-primary", type:"button", onclick: go }, CONFIG.people.next);
+  next.disabled = !draft.initials;
+
+  field.addEventListener("input", function(){
+    draft.initials = field.value.toUpperCase().replace(/\s+/g, "");
+    if (field.value !== draft.initials) field.value = draft.initials;
+    next.disabled = !draft.initials;
+  });
+
+  setTimeout(function(){ try { field.focus(); } catch(e){} }, 60);
+
+  return h("div", { class:"app" }, [
+    h("div", { class:"topbar" }, [
+      h("button", { class:"iconbtn", type:"button", onclick: function(){ state.phase = "who"; render(); } },
+        [h("span", { class:"chev", html: ICON.back }), h("span", { text:"Back" })]),
+      h("div", { class:"step", text:"1 of 2" })
+    ]),
+    h("div", { class:"screen" }, [
+      h("div", { class:"titles" }, [h("div", { class:"prompt-text", text: CONFIG.people.initialsPrompt })]),
+      h("div", { class:"pad" }, [field]),
+      h("div", { class:"center" }),
+      h("div", { class:"controls" }, [next])
+    ])
+  ]);
+}
+
+function screenNewEmoji(){
+  var field = h("input", {
+    class:"bigfield emoji", type:"text", maxlength:"8", autocomplete:"off",
+    spellcheck:"false", "aria-label":"One emoji"
+  });
+  field.value = draft.emoji;
+  field.addEventListener("input", function(){ draft.emoji = field.value; });
+
+  function finish(keepEmoji){
+    var emoji = keepEmoji ? String(draft.emoji || "").trim() : "";
+    if (emoji && !isSingleEmoji(emoji)){ toast(CONFIG.people.emojiBad); return; }
+    setMe({
+      initials: draft.initials,
+      emoji: emoji,
+      name: draft.initials + (emoji ? " " + emoji : "")
+    });
+    state.phase = "home";
+    render();
+  }
+
+  setTimeout(function(){ try { field.focus(); } catch(e){} }, 60);
+
+  return h("div", { class:"app" }, [
+    h("div", { class:"topbar" }, [
+      h("button", { class:"iconbtn", type:"button", onclick: function(){ state.phase = "newinitials"; render(); } },
+        [h("span", { class:"chev", html: ICON.back }), h("span", { text:"Back" })]),
+      h("div", { class:"step", text:"2 of 2" })
+    ]),
+    h("div", { class:"screen" }, [
+      h("div", { class:"titles" }, [h("div", { class:"prompt-text", text: CONFIG.people.emojiPrompt })]),
+      h("div", { class:"hint", text: CONFIG.people.emojiHint }),
+      h("div", { class:"pad" }, [field]),
+      h("div", { class:"center" }),
+      h("div", { class:"controls" }, [
+        h("button", { class:"btn btn-primary", type:"button", onclick: function(){ finish(true); } }, CONFIG.people.done),
+        h("button", { class:"btn btn-quiet", type:"button", onclick: function(){ finish(false); } }, CONFIG.people.skip)
+      ])
+    ])
+  ]);
+}
+
 
 /* ---------- the room menu ---------- */
 function screenMenu(){
@@ -1759,7 +2373,12 @@ function screenMenu(){
       h("h1", { text: CONFIG.appTitle }),
       h("div", { class:"menumeta", text: todayMD() + " · " + doneCount() + " of " + CONFIG.route.length + " done" })
     ]),
-    h("div", { class:"menuhint", text: CONFIG.menuHint }),
+    h("div", { class:"menuhint" }, [
+      h("span", { text: CONFIG.menuHint }),
+      h("button", { class:"idchip", type:"button", "aria-label":"Switch who is checking",
+        onclick: function(){ state.phase = "who"; render(); } },
+        me ? ((me.emoji ? me.emoji + " " : "") + me.initials) : "?")
+    ]),
     grid,
     h("div", { class:"controls" }, [build])
   ]);
@@ -1940,7 +2559,13 @@ function render(){
   var root = document.getElementById("app");
   var next;
 
-  if (state.phase === "home"){
+  if (state.phase === "who"){
+    next = screenWho();
+  } else if (state.phase === "newinitials"){
+    next = screenNewInitials();
+  } else if (state.phase === "newemoji"){
+    next = screenNewEmoji();
+  } else if (state.phase === "home"){
     next = screenHome();
   } else if (state.phase === "menu"){
     next = screenMenu();
@@ -1971,6 +2596,10 @@ function render(){
 }
 /* ---------- go ---------- */
 saved = readSaved();
+loadMe();
+loadLastCheck();
+flushQueue();
+if (!me) state.phase = "who";   /* everything lands under somebody's name */
 render();
 </script>
 </body>

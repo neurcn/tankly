@@ -36,6 +36,20 @@ tap a finished room again to fix a reading. iPSC is marked **Floor 2**.
 **Build Slack message stays blocked until all six rooms are checked**, so the
 message can never report a number nobody read.
 
+## Who is checking
+
+The first thing Tankly asks is who you are. Pick yourself from the list, or
+make yourself with **+ New user**: initials, then an emoji so two people with
+the same initials can tell each other apart. The emoji is optional and the
+box takes exactly one, refusing letters, digits and two emoji.
+
+It is remembered on that phone, so it is asked once. The chip on the room
+menu switches. Nothing is checked against anything, so a wrong name costs
+nothing worse than a wrong name.
+
+The list comes from the sheet, most recent publisher first, and is empty but
+for **+ New user** until somebody publishes.
+
 ## Flagging something that needs attention
 
 Every screen has a ⚠ button in the top right corner. Tap it to mark that the
@@ -132,6 +146,46 @@ and stays searchable.
 | `"clean"` | Plain text, no bold at all. Renders correctly everywhere and stays fully searchable. Use this if the bold letters ever show as boxes on somebody's phone. |
 | `"markup"` | The old `*asterisk*` and `:warning:` style, for typing by hand. |
 
+## The shared log
+
+Optional. With `CONFIG.logUrl` empty, Tankly is one self-contained page and
+behaves exactly as described above. Fill it in with a deployed Apps Script web
+app URL and three things switch on:
+
+- **Last readings** under each reading, so `Last: 850 psi · 9/21` whoever took it
+- **A shared pH week**, so the second person in a week is not asked to
+  calibrate something already settled on somebody else's phone
+- **The roster and the Tank Checks line**
+
+`sheet-log.gs` is the whole backend and its own setup instructions are in the
+comment at the top of it. Two things that bite: the deployment must be
+readable by **Anyone**, not "Anyone with a Google account", and later edits go
+out through **Manage deployments → pencil → New version**, because "New
+deployment" mints a fresh URL and leaves the app talking to the old one.
+
+**A row is only written when somebody copies the message.** Walking a check
+and abandoning it leaves no trace, on purpose: the sheet records what was
+actually passed on, not what was typed in.
+
+Everything about the log is best effort. Apps Script is slow and uneven, so
+every call gives up after twenty seconds and tries once more, a check that
+could not be sent is kept and sent next time the app opens, and each check
+carries an id so a resend cannot become two rows. **A check never waits on the
+network and works start to finish with no signal at all.**
+
+## The Tank Checks line
+
+The last line of the message, which needs the log to mean anything:
+
+```
+Tank Checks: 45 | #1 🥇 | 2 🔥
+```
+
+The count includes the check being copied. The position is by total checks,
+with a medal for the top three and a bare `#4` below that. The fire appears
+only on a run of two or more, where a run means checks in a row at the end of
+the log that are yours: anybody else publishing resets it.
+
 ## The files
 
 | File | What it is |
@@ -139,6 +193,7 @@ and stays searchable.
 | `index.html` | The whole app. HTML, CSS and JavaScript in one file, no build step, no dependencies. |
 | `manifest.webmanifest` | Makes it installable to a phone home screen. |
 | `icon.svg`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` | The home screen icon. |
+| `sheet-log.gs` | The shared log's backend, and its own setup instructions. Only needed if you want the log. |
 | `make-icons.py` | Redraws the three PNG icons. Only needed if you want to change how the icon looks: `python3 make-icons.py`, no dependencies. Keep it in step with `icon.svg`, which is the same drawing by hand. |
 
 ## Changing the rooms, tanks or route
@@ -195,15 +250,44 @@ Copy a whole room block, edit the fields, and give it a `menu` number. Bear in
 mind the menu is built for six buttons in two rows of three; a seventh will
 still work but the rows will get crowded.
 
-### Storage lines
+### Storage
 
-A room with `storage: true` gets a counting screen after its tanks, and a
-`Storage:` line in the message. A room with `storage: false` gets neither: no
-screen, and no Storage line at all. Only Secondary and Primary have storage.
+A room's storage is described as the cylinders that are normally out there,
+one line per physical cylinder:
 
-The message lists only the counts above zero, N2 before CO2 and full before
-empty, matching the order of `CONFIG.storageItems`. If every count is zero the
-line reads `Storage: none`.
+```js
+storage: {
+  slots: [
+    { gas: "N2",  label: "N₂"      },
+    { gas: "CO2", label: "CO₂ one" },
+    { gas: "CO2", label: "CO₂ two" }
+  ],
+  allowExtra: true,
+  alertWhenNoneFull: ["N2", "CO2"]
+}
+```
+
+The screen then asks about each cylinder by name, **Full**, **Empty** or
+**Missing**, so nobody counts anything and a cylinder that is not there is
+recorded as absent rather than invented as an empty. Confirm stays blocked
+until every cylinder has an answer, so a default nobody looked at can never
+reach the message. **Add a cylinder** covers anything unexpected.
+
+Secondary has the three slots above. Primary has none, because it normally
+holds nothing; on the day something is out there you add it, and most days it
+is zero taps and `Storage: none`.
+
+`alertWhenNoneFull` lists the gases whose whole purpose is to be a full spare.
+When none of that gas is left full, the app offers an alert. Secondary's stock
+is exactly that, so one empty CO₂ is quiet and two is not. Primary's list is
+empty on purpose: a cylinder sitting there was almost certainly just swapped
+out, and an empty one is ordinary.
+
+A room with no `storage` at all gets no screen and no Storage line.
+
+The message lists only what is present, N2 before CO2 and full before empty,
+matching the order of `CONFIG.storageItems`. With nothing out there the line
+reads `Storage: none`.
 
 ### Other settings
 
@@ -225,6 +309,10 @@ line reads `Storage: none`.
 | `messageOrder` | The order of the sections in the message by stop type. Rooms first, then LN, then the probe. |
 | `messageTitle` | The first line of the message, before the date. |
 | `copyStyle` | How Copy puts the message on the clipboard. See the Copy section above. |
+| `people` | Every word on the who-is-checking screens. |
+| `statsLabel`, `medals`, `streakMark` | The Tank Checks line. Set `statsLabel` to `""` to drop it. |
+| `logUrl`, `logTimeoutMs` | The shared log. Empty means off. |
+| `storageWords` | The wording on a storage screen. |
 | `hapticMs` | Length of the buzz when a slider crosses a snap point. `0` turns it off. Android only; iPhone ignores it. |
 
 ### After you edit
@@ -277,6 +365,8 @@ Calibration checked and good, stored correctly
 
 Streamlined with Tankly
 https://neurcn.github.io/tankly/
+
+Tank Checks: 45 | #1 🥇 | 2 🔥
 ```
 
 Every line that names a room or a section arrives bold.
