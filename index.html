@@ -2107,8 +2107,7 @@ function screenReview(){
   return h("div", { class:"app" }, [
     h("div", { class:"topbar" }, [
       h("button", { class:"iconbtn", type:"button", onclick: goMenu },
-        [h("span", { class:"chev", html: ICON.back }), h("span", { text:"Rooms" })]),
-      h("div", { class:"step", text:"Review" })
+        [h("span", { class:"chev", html: ICON.back }), h("span", { text:"Rooms" })])
     ]),
     progressBar(1,1),
     h("div", { class:"screen" }, [
@@ -2192,8 +2191,7 @@ function screenOutput(){
   return h("div", { class:"app" }, [
     h("div", { class:"topbar" }, [
       h("button", { class:"iconbtn", type:"button", onclick: function(){ state.phase = "review"; render(); } },
-        [h("span", { class:"chev", html: ICON.back }), h("span", { text:"Review" })]),
-      h("div", { class:"step", text:"Done" })
+        [h("span", { class:"chev", html: ICON.back }), h("span", { text:"Review" })])
     ]),
     progressBar(1,1),
     h("div", { class:"screen" }, [
