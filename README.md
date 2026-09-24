@@ -210,18 +210,29 @@ could not be sent is kept and sent next time the app opens, and each check
 carries an id so a resend cannot become two rows. **A check never waits on the
 network and works start to finish with no signal at all.**
 
-## The Tank Checks line
+## The monthly leaderboard
 
 The last line of the message, which needs the log to mean anything:
 
 ```
-Tank Checks: 45 | #1 🥇 | 2 🔥
+September Checks: 12 | #1 🥇 | 2 🔥
 ```
 
-The count includes the check being copied. The position is by total checks,
-with a medal for the top three and a bare `#4` below that. The fire appears
-only on a run of two or more, where a run means checks in a row at the end of
-the log that are yours: anybody else publishing resets it.
+**The count and the placing cover the current calendar month** and start again
+on the 1st. The count includes the check being copied, because the sheet
+cannot know about it until a moment after that line is written. A medal for
+the top three, a bare `#4` below that, and a tie takes the better place.
+
+**The streak does not reset with the month.** It counts checks in a row at the
+end of the log that are yours, so publishing the last check of September and
+the first of October keeps it alive. Anybody else publishing resets it. It
+only appears at two or more, and the fire carries no label of its own.
+
+The month is decided by the phone that walked the check, not by the script's
+timezone, so a check late on the 30th counts where the person walking it
+would expect. The sheet keeps a `Month` column for it, and rows written
+before that column existed fall back to their timestamp, so nothing already
+logged goes missing from its month.
 
 ## The files
 
@@ -349,7 +360,7 @@ reads `Storage: none`.
 | `people` | Every word on the who-is-checking screens. |
 | `welcome` | The greeting on the opening screen and the Not you? link. Somebody who has never published gets the first-time wording. |
 | `guide` | Every word of the How to use page. |
-| `statsLabel`, `medals`, `streakMark` | The Tank Checks line. Set `statsLabel` to `""` to drop it. |
+| `statsLabel`, `monthNames`, `medals`, `streakMark` | The monthly leaderboard line. `{month}` in `statsLabel` becomes the month's name. Set `statsLabel` to `""` to drop the line. |
 | `logUrl`, `logTimeoutMs` | The shared log. Empty means off. |
 | `storageWords` | The wording on a storage screen. |
 | `hapticMs` | Length of the buzz when a slider crosses a snap point. `0` turns it off. Android only; iPhone ignores it. |

@@ -726,8 +726,13 @@ var CONFIG = {
   },
 
   /* The very last line of the message, which needs the shared log to mean
-     anything. Set statsLabel to "" to drop the line entirely. */
-  statsLabel: "Tank Checks",
+     anything. The count and the placing cover the current calendar month and
+     start again on the 1st; the streak does not, because a run of checks is
+     a run whatever the date. {month} becomes the month's name. Set
+     statsLabel to "" to drop the line entirely. */
+  statsLabel: "{month} Checks",
+  monthNames: ["January", "February", "March", "April", "May", "June", "July",
+               "August", "September", "October", "November", "December"],
   medals: ["🥇", "🥈", "🥉"],
   streakMark: "🔥",
 
@@ -1005,6 +1010,15 @@ function dayKey(d){
   d = d || new Date();
   return d.getFullYear() + "-" + pad2(d.getMonth()+1) + "-" + pad2(d.getDate());
 }
+function monthKey(d){
+  d = d || new Date();
+  return d.getFullYear() + "-" + pad2(d.getMonth() + 1);
+}
+function monthName(d){
+  d = d || new Date();
+  return (CONFIG.monthNames || [])[d.getMonth()] || "";
+}
+
 /* Weeks run Monday to Sunday, named after their Monday. */
 function weekKey(d){
   d = d || new Date();
@@ -1432,7 +1446,14 @@ function logFetch(opts){
     init.headers = { "Content-Type": "text/plain;charset=utf-8" };
     init.body = JSON.stringify(opts.body);
   }
-  return fetch(CONFIG.logUrl, init).then(function(r){
+  /* The month goes with the request so the boundary follows the calendar on
+     this phone, not the one the script happens to run in. */
+  var url = CONFIG.logUrl;
+  if (init.method === "GET"){
+    url += (url.indexOf("?") < 0 ? "?" : "&") + "month=" + encodeURIComponent(monthKey());
+  }
+
+  return fetch(url, init).then(function(r){
     clearTimeout(timer);
     return r.text();
   }, function(err){
@@ -1523,8 +1544,9 @@ function statsLine(){
                   .sort(function(a, b){ return b - a; });
   var rank = all.indexOf(mine) + 1;                 /* a tie takes the better place */
   var medal = (CONFIG.medals || [])[rank - 1] || "";
+  var label = fill(CONFIG.statsLabel, { month: monthName() });
 
-  var parts = [CONFIG.statsLabel + ": " + mine, "#" + rank + (medal ? " " + medal : "")];
+  var parts = [label + ": " + mine, "#" + rank + (medal ? " " + medal : "")];
   var streak = (summary.lastBy === me.name) ? (summary.lastStreak || 0) + 1 : 1;
   if (streak > 1) parts.push(streak + " " + CONFIG.streakMark);
   return parts.join(" | ");
@@ -1549,10 +1571,14 @@ function lastReadingRow(screen){
 function loadLastCheck(tries){
   lastCheck = readCache(LOG_LAST_KEY);
   summary   = readCache(LOG_SUMMARY_KEY);
+  /* counts held over from last month are last month's, and would be read as
+     this month's until the sheet answered */
+  if (summary && summary.month !== monthKey()) summary = null;
   if (!logEnabled()) return;
   logFetch({}).then(function(res){
     if (!res || !res.ok) return;
-    summary = { users: res.users || [], lastBy: res.lastBy || "", lastStreak: res.lastStreak || 0 };
+    summary = { month: monthKey(), users: res.users || [],
+                lastBy: res.lastBy || "", lastStreak: res.lastStreak || 0 };
     writeCache(LOG_SUMMARY_KEY, summary);
     if (res.last){
       lastCheck = res.last;
@@ -1619,15 +1645,21 @@ function noteOwnPublish(payload){
   if (!summary) summary = { users: [], lastBy: "", lastStreak: 0 };
 
   var users = (summary.users || []).map(function(u){
-    return { name: u.name, count: u.count, lastAt: u.lastAt };
+    return { name: u.name, count: u.count, total: u.total, lastAt: u.lastAt };
   });
   var mine = null;
   users.forEach(function(u){ if (u.name === name) mine = u; });
-  if (mine){ mine.count++; mine.lastAt = payload.at; }
-  else users.push({ name: name, count: 1, lastAt: payload.at });
+  if (mine){
+    mine.count++;
+    if (typeof mine.total === "number") mine.total++;
+    mine.lastAt = payload.at;
+  } else {
+    users.push({ name: name, count: 1, total: 1, lastAt: payload.at });
+  }
   users.sort(function(a, b){ return a.lastAt < b.lastAt ? 1 : (a.lastAt > b.lastAt ? -1 : 0); });
 
   summary = {
+    month: monthKey(),
     users: users,
     /* read before lastBy is overwritten just below */
     lastStreak: (summary.lastBy === name) ? (summary.lastStreak || 0) + 1 : 1,

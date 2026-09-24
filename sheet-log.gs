@@ -53,7 +53,7 @@
  */
 
 var SHEET_NAME = 'Checks';
-var FIXED_COLUMNS = ['When', 'Who', 'Date', 'Week', 'pH', 'Flags', 'Message'];
+var FIXED_COLUMNS = ['When', 'Who', 'Date', 'Month', 'Week', 'pH', 'Flags', 'Message'];
 
 /** Writes one check. */
 function doPost(e) {
@@ -76,6 +76,13 @@ function doPost(e) {
     var sheet = getSheet();
     var header = readHeader(sheet);
 
+    // a fixed column added after this sheet was first written. It goes on the
+    // end rather than in its listed position, because shuffling columns would
+    // put every existing row's values under the wrong headings.
+    FIXED_COLUMNS.forEach(function (name) {
+      if (header.indexOf(name) < 0) header.push(name);
+    });
+
     // every reading gets a column of its own, added the first time it appears
     body.readings.forEach(function (r) {
       if (r && r.label && header.indexOf(r.label) < 0) header.push(String(r.label));
@@ -87,6 +94,9 @@ function doPost(e) {
     put(row, header, 'When',  body.at || new Date().toISOString());
     put(row, header, 'Who',   (body.user && body.user.name) || '');
     put(row, header, 'Date',  body.date || '');
+    // the month this check belongs to, taken from the phone that walked it,
+    // so a check late on the 30th counts where the walker thinks it should
+    put(row, header, 'Month', String(body.day || '').slice(0, 7));
     put(row, header, 'Week',  body.week || '');
     put(row, header, 'pH',    (body.ph && body.ph.outcome) || '');
     put(row, header, 'Flags', (body.flags || []).map(function (f) {
@@ -115,16 +125,28 @@ function doPost(e) {
 
 /**
  * Hands back everything the app needs on opening: the most recent check, who
- * has published and how often, and how long the current run by one person is.
+ * has published, how often this month and how often ever, and how long the
+ * current run by one person is.
+ *
+ * The month comes from the app as ?month=2026-09, so the boundary follows the
+ * calendar on the phone rather than whatever timezone this script thinks it
+ * is in. Without one it falls back to this script's own idea of now.
+ *
+ * The streak is counted over every row regardless of month. A run of checks
+ * is a run; the 1st of the month is no reason to end one.
  *
  * Ranking is left to the app, which has to work out its own position with the
  * check it is about to publish counted in, and cannot do that from a rank
  * worked out before that check existed.
  */
-function doGet() {
+function doGet(e) {
   try {
+    var wanted = (e && e.parameter && e.parameter.month)
+      ? String(e.parameter.month)
+      : monthOf(new Date());
+
     var raw = PropertiesService.getScriptProperties().getProperty('last');
-    var out = { ok: true, last: raw ? JSON.parse(raw) : null };
+    var out = { ok: true, month: wanted, last: raw ? JSON.parse(raw) : null };
 
     var sheet = getSheet();
     var rows = sheet.getLastRow() - 1;              // the header is row 1
@@ -132,24 +154,38 @@ function doGet() {
       var header = readHeader(sheet);
       var whoAt = header.indexOf('Who');
       var whenAt = header.indexOf('When');
-      var width = Math.max(whoAt, whenAt) + 1;
+      var monthAt = header.indexOf('Month');
+      var width = Math.max(whoAt, whenAt, monthAt) + 1;
       var values = sheet.getRange(2, 1, rows, width).getValues();
 
-      var counts = {}, seenAt = {}, order = [];
+      var counts = {}, totals = {}, seenAt = {}, order = [];
       var lastName = '', streak = 0;
 
       for (var i = 0; i < values.length; i++) {
         var name = whoAt >= 0 ? String(values[i][whoAt] || '').trim() : '';
         if (!name) continue;
-        if (!counts[name]) { counts[name] = 0; order.push(name); }
-        counts[name]++;
-        seenAt[name] = whenAt >= 0 ? String(values[i][whenAt] || '') : '';
+
+        var when = whenAt >= 0 ? values[i][whenAt] : '';
+        // rows written before the Month column existed still belong to a
+        // month, so work it out from when they were written
+        var month = monthAt >= 0 ? monthOf(values[i][monthAt]) : '';
+        if (!month) month = monthOf(when);
+
+        if (totals[name] === undefined) {
+          totals[name] = 0;
+          counts[name] = 0;
+          order.push(name);
+        }
+        totals[name]++;
+        if (month === wanted) counts[name]++;
+        seenAt[name] = (when instanceof Date) ? when.toISOString() : String(when || '');
+
         // a run of one person's checks at the very end of the log
         if (name === lastName) streak++; else { lastName = name; streak = 1; }
       }
 
       out.users = order.map(function (name) {
-        return { name: name, count: counts[name], lastAt: seenAt[name] };
+        return { name: name, count: counts[name], total: totals[name], lastAt: seenAt[name] };
       }).sort(function (a, b) {
         return a.lastAt < b.lastAt ? 1 : (a.lastAt > b.lastAt ? -1 : 0);
       });
@@ -164,6 +200,20 @@ function doGet() {
   } catch (err) {
     return json({ ok: false, error: String(err) });
   }
+}
+
+/**
+ * The YYYY-MM a cell belongs to. Sheets may hand back a Date where a string
+ * was written, so both have to be handled or a whole month's counting
+ * quietly comes out empty.
+ */
+function monthOf(value) {
+  if (value instanceof Date) {
+    var m = value.getMonth() + 1;
+    return value.getFullYear() + '-' + (m < 10 ? '0' + m : String(m));
+  }
+  var text = String(value || '');
+  return text.length >= 7 ? text.slice(0, 7) : '';
 }
 
 /** Drops a value into the column of that name, if the column exists. */
