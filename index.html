@@ -71,6 +71,7 @@ button{font:inherit;color:inherit;margin:0;touch-action:manipulation;cursor:poin
 .titles{flex:none;display:flex;align-items:flex-start;gap:8px;padding:6px 14px 6px 18px}
 .prompt-text{flex:1;min-width:0;font-size:21px;font-weight:700;line-height:1.28;letter-spacing:-.01em}
 .prompt-text u{text-underline-offset:3px;text-decoration-thickness:2px}
+.sidebtns{flex:none;display:flex;flex-direction:column;gap:8px}
 .infobtn{
   flex:none;width:48px;height:48px;border-radius:14px;
   border:1px solid var(--line);background:var(--surface);color:var(--accent);
@@ -80,7 +81,7 @@ button{font:inherit;color:inherit;margin:0;touch-action:manipulation;cursor:poin
 .infobtn.on{background:var(--accent);border-color:transparent;color:var(--accent-ink)}
 .bubblewrap{flex:none;position:relative;padding:0 18px 4px}
 .bubbletip{
-  position:absolute;right:88px;top:-5px;width:11px;height:11px;background:var(--surface);
+  position:absolute;right:32px;top:-5px;width:11px;height:11px;background:var(--surface);
   border-left:1px solid var(--accent);border-top:1px solid var(--accent);transform:rotate(45deg);
 }
 .bubble{
@@ -1876,10 +1877,11 @@ function flagButton(screen){
 function promptRow(screen){
   var text = h("div", { class:"prompt-text" });
   text.appendChild(richText(screen.prompt));
-  var kids = [text];
-  if (screen.info) kids.push(infoButton(screen));
-  kids.push(flagButton(screen));
-  return h("div", { class:"titles" }, kids);
+  /* The buttons stack rather than sit side by side: two of them in a row
+     squeezed the sentence onto a second line. */
+  var side = h("div", { class:"sidebtns" }, [flagButton(screen)]);
+  if (screen.info) side.appendChild(infoButton(screen));
+  return h("div", { class:"titles" }, [text, side]);
 }
 function infoBubble(screen){
   if (!infoOpen || !screen.info) return null;
