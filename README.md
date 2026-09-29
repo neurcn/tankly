@@ -68,8 +68,9 @@ A typed value is taken exactly as entered rather than snapped to the grid,
 since the reason to type is usually that you want a number the bar cannot
 land on. It is pulled back into range if you overshoot the tank's limits.
 
-**The bar opens where that tank read last time**, falling back to halfway up
-if there is no previous reading to go on. A value nobody has touched yet is
+**The bar opens where that tank read last time**, with a line above it saying
+what that was, when, and who took it, falling back to halfway up if there is
+no previous reading to go on. A value nobody has touched yet is
 shown **greyed**, and turns solid the moment it is dragged or typed, so
 "I confirmed without looking" is visible at a glance.
 
@@ -89,9 +90,17 @@ green bar tells you which one is the N₂ at a glance. Storage and the probe
 keep pages of their own either way: they are a different sort of question.
 
 A shared page says it once rather than per column: a single line at the top
-naming the gases on it, each in its own colour, and **one** ⚠ that asks which
-tanks it applies to with a checkbox each, so one note can cover two or three
-of them. Each column keeps its own ⓘ, whose note is about that tank alone.
+naming the gases on it, each in its own colour, and **one ⚠ and one ⓘ** for
+the whole page. The ⚠ asks which tanks it applies to with a checkbox each, so
+one note can cover two or three of them; the ⓘ shows the notes for the tanks
+on the page, a gas's note appearing once however many tanks of it there are.
+
+Tanks are shown **N₂ first** whatever order a room lists them in, so the green
+bar is always the leftmost. `CONFIG.tankOrderByGas` sets it, and it decides
+the order of the `Running:` line too, so the screen and the message agree.
+
+An ⓘ bubble opens **to the left of the button and floats over** what is
+beneath it, in either layout, so reading it never shortens the bar below.
 
 The switch is by window size, `CONFIG.wideFrom`, and height counts as much as
 width because the bars need somewhere to stand. Turning a tablet on its side
@@ -403,6 +412,7 @@ reads `Storage: none`.
 | `gasColors`, `barScaleByGas` | The colour and height of a bar, by gas. |
 | `wideFrom` | The window size at which a room's tanks start sharing a screen. |
 | `multiPrompt` | The single line at the top of a shared page. `{gases}` becomes the gases on it. |
+| `tankOrderByGas` | The order tanks are shown and reported in, whatever order a room lists them. |
 | `discard` | The wording of Discard this check. |
 | `alertAtOrBelow` | A tank at or below this reading offers an alert. Default 0, meaning only a completely empty tank. A stop can replace it outright with `alerts` bands, the way LN does. |
 | `storageItems` | The four counter rows and how they are worded in the message. |
