@@ -281,6 +281,7 @@ button{font:inherit;color:inherit;margin:0;touch-action:manipulation;cursor:poin
 .storenone{padding:6px 2px 14px;font-size:16px;color:var(--muted)}
 .lastread{flex:none;text-align:center;font-size:13.5px;font-weight:600;color:var(--muted);padding:2px 18px 4px;font-variant-numeric:tabular-nums}
 .lognote{margin-top:10px;font-size:13.5px;color:var(--muted);text-align:center;line-height:1.4}
+.note-warn{color:var(--warn)}
 .addbtn{
   width:100%;min-height:54px;border-radius:15px;border:1px dashed var(--line);
   background:transparent;color:var(--muted);font-size:16px;font-weight:700;
@@ -793,7 +794,12 @@ var CONFIG = {
   doneToday: {
     title: "Today's check is already done",
     body: "{who} published it {when}.",
-    again: "Start another check"
+    again: "Start another check",
+    /* The sheet takes a few seconds to answer. Until it has, the app does
+       not know whether the round is done, and says so rather than showing a
+       confident Start button that might send somebody round for nothing. */
+    checking: "Checking whether today's round has already been done...",
+    unknown: "Could not reach the log, so somebody may already have done today's round."
   },
 
   /* The How to use page, opened from the foot of the opening screen. One
@@ -1754,15 +1760,43 @@ function lastReadingRow(screen){
   return h("div", { class:"lastread", text: line });
 }
 
+/* "off" | "loading" | "ok" | "failed". The opening screen reports this,
+   because "nobody has done today's round" and "I have not managed to ask
+   yet" look identical otherwise, and only one of them is safe to act on. */
+var logStatus = "off";
+var LOG_TRIES = 3;
+
+function redrawIfSafe(){
+  /* never under somebody's thumb */
+  if (state.phase === "home" || state.phase === "menu" ||
+      state.phase === "who"  || state.phase === "output") render();
+}
+
 function loadLastCheck(tries){
-  lastCheck = readCache(LOG_LAST_KEY);
-  summary   = readCache(LOG_SUMMARY_KEY);
-  /* counts held over from last month are last month's, and would be read as
-     this month's until the sheet answered */
-  if (summary && summary.month !== monthKey()) summary = null;
-  if (!logEnabled()) return;
+  tries = tries || 0;
+  if (!tries){
+    lastCheck = readCache(LOG_LAST_KEY);
+    summary   = readCache(LOG_SUMMARY_KEY);
+    /* counts held over from last month are last month's, and would be read
+       as this month's until the sheet answered */
+    if (summary && summary.month !== monthKey()) summary = null;
+  }
+  if (!logEnabled()){ logStatus = "off"; return; }
+
+  logStatus = "loading";
+  function giveUpOrRetry(){
+    if (tries + 1 < LOG_TRIES){
+      /* a slow answer is the usual kind of failure here, so back off and
+         ask again rather than deciding the sheet is unreachable */
+      setTimeout(function(){ loadLastCheck(tries + 1); }, 2500 * (tries + 1));
+    } else {
+      logStatus = "failed";
+      redrawIfSafe();
+    }
+  }
+
   logFetch({}).then(function(res){
-    if (!res || !res.ok) return;
+    if (!res || !res.ok){ giveUpOrRetry(); return; }
     summary = { month: monthKey(), users: res.users || [],
                 lastBy: res.lastBy || "", lastStreak: res.lastStreak || 0 };
     writeCache(LOG_SUMMARY_KEY, summary);
@@ -1770,13 +1804,9 @@ function loadLastCheck(tries){
       lastCheck = res.last;
       writeCache(LOG_LAST_KEY, lastCheck);
     }
-    /* only redraw somewhere harmless: never under somebody's thumb */
-    if (state.phase === "home" || state.phase === "menu" ||
-        state.phase === "who"  || state.phase === "output") render();
-  }, function(){
-    /* one more go, since a slow answer is the common kind of failure here */
-    if (!tries) setTimeout(function(){ loadLastCheck(1); }, 2500);
-  });
+    logStatus = "ok";
+    redrawIfSafe();
+  }, giveUpOrRetry);
 }
 
 function checkPayload(){
@@ -3019,6 +3049,10 @@ function screenHome(){
             h("h2", { text: todayMD() + " round, " + CONFIG.route.length + " rooms" }),
             h("p", { text: rooms })
           ]),
+          (!alreadyDone && logStatus === "loading")
+            ? h("div", { class:"lognote", text: CONFIG.doneToday.checking }) : null,
+          (!alreadyDone && logStatus === "failed")
+            ? h("div", { class:"lognote note-warn", text: CONFIG.doneToday.unknown }) : null,
           started ? h("div", { class:"card" }, [
             h("h2", { text: cardTitle }),
             h("p", { text: stepText })

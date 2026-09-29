@@ -57,6 +57,12 @@ building again should be a deliberate choice rather than the obvious next tap.
 This reads the **shared log**, not the phone. Without it the app can only know
 what that one device has walked, which tells a second person nothing.
 
+The sheet takes a few seconds to answer, so until it has, the screen says it
+is still checking rather than showing a confident Start button. If the log
+cannot be reached at all after three tries, it says that too. "Nobody has done
+today's round" and "I have not managed to ask yet" look identical otherwise,
+and only one of them is safe to act on.
+
 A round this phone has part walked is reported separately, and only once
 somebody has actually set a reading: merely opening a room does not count.
 
