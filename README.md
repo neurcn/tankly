@@ -47,6 +47,19 @@ it sits below the Start button rather than competing with it.
 The wording lives in `CONFIG.guide`, so the steps can be rewritten without
 touching anything else.
 
+## Has it already been done today
+
+The opening screen says so, in green, naming whoever published it and how long
+ago: **Today's check is already done. JBR 🧪 published it 3 hours ago.** The
+Start button goes quiet and reads *Start another check*, because walking the
+building again should be a deliberate choice rather than the obvious next tap.
+
+This reads the **shared log**, not the phone. Without it the app can only know
+what that one device has walked, which tells a second person nothing.
+
+A round this phone has part walked is reported separately, and only once
+somebody has actually set a reading: merely opening a room does not count.
+
 ## Who is checking
 
 The first thing Tankly asks is who you are. Pick yourself from the list, or
@@ -414,6 +427,7 @@ reads `Storage: none`.
 | `multiPrompt` | The single line at the top of a shared page. `{gases}` becomes the gases on it. |
 | `tankOrderByGas` | The order tanks are shown and reported in, whatever order a room lists them. |
 | `discard` | The wording of Discard this check. |
+| `doneToday` | The wording of the already-done card on the opening screen. |
 | `alertAtOrBelow` | A tank at or below this reading offers an alert. Default 0, meaning only a completely empty tank. A stop can replace it outright with `alerts` bands, the way LN does. |
 | `storageItems` | The four counter rows and how they are worded in the message. |
 | `ph` | Every word on the two probe screens and the three lines they can produce. |

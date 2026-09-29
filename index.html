@@ -330,6 +330,8 @@ button{font:inherit;color:inherit;margin:0;touch-action:manipulation;cursor:poin
 .gnotes div{font-size:14.5px;color:var(--muted);line-height:1.5}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:var(--shadow)}
 .card h2{margin:0 0 4px;font-size:17px;font-weight:700}
+.card-done{border-color:var(--ok)}
+.card-done h2{color:var(--ok)}
 .card p{margin:0;font-size:15px;color:var(--muted);line-height:1.45}
 .group{margin:14px 0 6px;padding:0 18px;font-size:14px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .item{
@@ -784,6 +786,14 @@ var CONFIG = {
     back: "Welcome back, {name}",
     first: "Hello, {name}",
     notYou: "Not you?"
+  },
+
+  /* Shown on the opening screen when anybody has already published a check
+     today, so nobody walks the building a second time for nothing. */
+  doneToday: {
+    title: "Today's check is already done",
+    body: "{who} published it {when}.",
+    again: "Start another check"
   },
 
   /* The How to use page, opened from the foot of the opening screen. One
@@ -1702,6 +1712,16 @@ function statsLine(){
   var streak = (summary.lastBy === me.name) ? (summary.lastStreak || 0) + 1 : 1;
   if (streak > 1) parts.push(streak + " " + CONFIG.streakMark);
   return parts.join(" | ");
+}
+
+/* The last published check, if it was published today, whoever did it. The
+   phone's own saved session says only what this device has walked, which is
+   no use to somebody wondering whether a colleague already went round. */
+function checkedToday(){
+  if (!lastCheck) return null;
+  var day = lastCheck.day || "";
+  if (!day && lastCheck.at) day = String(lastCheck.at).slice(0, 10);
+  return (day === dayKey()) ? lastCheck : null;
 }
 
 /* What the last check read, for the hint under a reading. */
@@ -2928,9 +2948,11 @@ function screenGuide(){
 
 function screenHome(){
   saved = readSaved();
+  /* Opening a room writes a reading before anybody has touched it, so an
+     answer on its own is not evidence that a round is under way. */
   var started = !!saved && (
     (saved.done && Object.keys(saved.done).length > 0) ||
-    (saved.answers && Object.keys(saved.answers).length > 0)
+    (saved.touched && Object.keys(saved.touched).length > 0)
   );
   var finished = started && saved.phase === "output";
 
@@ -2948,13 +2970,25 @@ function screenHome(){
     stepText = n + " of " + CONFIG.route.length + " rooms done, saved " + relTime(saved.savedAt);
   }
 
-  var buttons = started
-    ? [
-        h("button", { class:"btn btn-primary", type:"button", onclick: resume },
-          finished ? "Open the message" : "Resume check"),
-        h("button", { class:"btn", type:"button", onclick: startFresh }, "Start over")
-      ]
-    : [ h("button", { class:"btn btn-primary", type:"button", onclick: startFresh }, "Start check") ];
+  var alreadyDone = checkedToday();
+
+  var buttons;
+  if (started){
+    buttons = [
+      h("button", { class:"btn btn-primary", type:"button", onclick: resume },
+        finished ? "Open the message" : "Resume check"),
+      h("button", { class:"btn", type:"button", onclick: startFresh }, "Start over")
+    ];
+  } else if (alreadyDone){
+    /* Deliberately not the loud blue one. The round is done; the card above
+       is what this screen is for, and walking it again is a choice rather
+       than the obvious next tap. */
+    buttons = [ h("button", { class:"btn", type:"button", onclick: startFresh },
+                  CONFIG.doneToday.again) ];
+  } else {
+    buttons = [ h("button", { class:"btn btn-primary", type:"button", onclick: startFresh },
+                  "Start check") ];
+  }
 
   /* quiet on purpose: findable by somebody who has never done this, and
      easy to stop noticing once you have */
@@ -2974,6 +3008,13 @@ function screenHome(){
                   CONFIG.welcome.notYou) : null
         ]),
         h("div", { class:"pad" }, [
+          alreadyDone ? h("div", { class:"card card-done" }, [
+            h("h2", { text: CONFIG.doneToday.title }),
+            h("p", { text: fill(CONFIG.doneToday.body, {
+              who: (alreadyDone.user && alreadyDone.user.name) || "Somebody",
+              when: relTime(new Date(alreadyDone.at).getTime())
+            }) })
+          ]) : null,
           h("div", { class:"card" }, [
             h("h2", { text: todayMD() + " round, " + CONFIG.route.length + " rooms" }),
             h("p", { text: rooms })
