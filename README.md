@@ -61,6 +61,35 @@ nothing worse than a wrong name.
 The list comes from the sheet, most recent publisher first, and is empty but
 for **+ New user** until somebody publishes.
 
+## Taking a reading
+
+Drag the bar, nudge it with the ± buttons, or **tap the number and type it**.
+A typed value is taken exactly as entered rather than snapped to the grid,
+since the reason to type is usually that you want a number the bar cannot
+land on. It is pulled back into range if you overshoot the tank's limits.
+
+**The bar opens where that tank read last time**, falling back to halfway up
+if there is no previous reading to go on. A value nobody has touched yet is
+shown **greyed**, and turns solid the moment it is dragged or typed, so
+"I confirmed without looking" is visible at a glance.
+
+N₂ bars are **green and stand taller** than the **blue** CO₂ ones, sharing a
+floor so the difference reads without checking the label. LN is green too: it
+is nitrogen. The colours live in `CONFIG.gasColors`, the heights in
+`CONFIG.barScaleByGas`.
+
+## One screen or three
+
+On a phone you take one reading at a time. **On a tablet or a laptop a room's
+tanks share a screen**, so Secondary is two pages rather than four, and the
+green bar tells you which one is the N₂ at a glance. Storage and the probe
+keep pages of their own either way: they are a different sort of question.
+
+The switch is by window size, `CONFIG.wideFrom`, and height counts as much as
+width because the bars need somewhere to stand. Turning a tablet on its side
+re-lays it out. Both layouts confirm the same readings, so a round started on
+one and finished on the other agrees with itself.
+
 ## ATTENTION lines
 
 An `ATTENTION` line under a room, and the ⚠️ beside its name, come from two
@@ -72,10 +101,13 @@ the message is built, so correcting a reading corrects its note too.
 
 | Reading | Note |
 | --- | --- |
-| A tank at 0 psi | `Empty CO2` or `Empty N2` |
+| A CO₂ tank at 0 psi | `Empty CO2` |
+| A CO₂ tank at 450 psi or less | `Low CO2, 400 psi` |
+| An N₂ tank at 0 psi | `Empty N2` |
+| An N₂ tank at 1100 psi or less | `Low N2, 900 psi` |
 | LN at 0% | `Empty LN` |
-| LN from 1 to 9% | `LN <10%` |
-| LN at exactly 10% | `LN at 10%` |
+| LN from 1 to 19% | `LN <20%` |
+| LN at exactly 20% | `LN at 20%` |
 | An empty cylinder in a room that stocks that gas, with no full one left | `No full CO2 in storage` |
 | An empty cylinder anywhere else | `1 empty CO2 in storage` |
 
@@ -141,8 +173,14 @@ answer to the first question settles calibration for the week:
 | I calibrated it today | `Recalibrated today, stored correctly` |
 
 **Every visit after that in the same week** asks only whether the probe is
-stored correctly, and the message says `Stored correctly`. There is a quiet
-*I recalibrated it today* on that screen for anyone who does it anyway.
+stored correctly, and the message says `Stored correctly`. That screen says
+quietly who settled it and when, so whoever is second in a week can see it
+was not skipped. There is a quiet *I recalibrated it today* for anyone who
+does it anyway.
+
+Who verified it travels inside the check itself: the one that performs the
+calibration records it, and each later check that week reads it off the last
+one and passes it on. The sheet is never asked and the app never guesses.
 
 The week runs Monday to Sunday. It is remembered on that phone alone, because
 a page served from GitHub has no server to share anything through. Somebody
@@ -346,9 +384,12 @@ reads `Storage: none`.
 | `infoByGas` | The circled i note shown on every tank of a gas, unless that tank has its own `info`. |
 | `tileGases` | Which gases are counted on a menu button, and how they are written there. |
 | `psiStep` | How far a psi slider jumps as you drag it. Default 50. |
-| `psiFineStep` | The two small buttons under a psi slider. Default 10. |
+| `psiFineStep` | The two small buttons under a psi slider. Default 50, the same as a drag step. |
 | `pctStep`, `pctFineStep` | The same two things for the LN percent slider. |
 | `storagePrompt` | The sentence at the top of a counting screen. |
+| `alertsByGas` | Alert bands for every tank of a gas. `{value}` becomes the reading, which is what tells two low tanks in one room apart. |
+| `gasColors`, `barScaleByGas` | The colour and height of a bar, by gas. |
+| `wideFrom` | The window size at which a room's tanks start sharing a screen. |
 | `alertAtOrBelow` | A tank at or below this reading offers an alert. Default 0, meaning only a completely empty tank. A stop can replace it outright with `alerts` bands, the way LN does. |
 | `storageItems` | The four counter rows and how they are worded in the message. |
 | `ph` | Every word on the two probe screens and the three lines they can produce. |

@@ -21,6 +21,7 @@
   --bg:#eaeef4; --surface:#ffffff; --surface-2:#dde4ee;
   --text:#0b1220; --muted:#5a6472; --line:#c9d2e0;
   --accent:#1455d4; --accent-ink:#ffffff; --accent-soft:#e2ebff;
+  --co2:#1455d4; --n2:#1d7a45;
   --ok:#0d7a48; --warn:#9a4a12;
   --shadow:0 1px 2px rgba(11,18,32,.07), 0 10px 26px rgba(11,18,32,.07);
 }
@@ -29,6 +30,7 @@
     --bg:#0a0f15; --surface:#151d27; --surface-2:#1f2a37;
     --text:#f2f6fb; --muted:#a3b2c4; --line:#2d3947;
     --accent:#4f91ff; --accent-ink:#04101f; --accent-soft:#16283f;
+    --co2:#4f91ff; --n2:#3fbf77;
     --ok:#46d68d; --warn:#ffb057;
     --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 26px rgba(0,0,0,.4);
   }
@@ -159,14 +161,25 @@ button{font:inherit;color:inherit;margin:0;touch-action:manipulation;cursor:poin
 
 /* ---------- readout ---------- */
 .readout{flex:none;display:flex;align-items:baseline;justify-content:center;gap:8px;padding:4px 0 6px}
-.readout .num{font-size:clamp(52px,17vw,80px);font-weight:800;line-height:1;letter-spacing:-.035em;font-variant-numeric:tabular-nums}
+.readout .num{
+  font-size:clamp(52px,17vw,80px);font-weight:800;line-height:1;letter-spacing:-.035em;
+  font-variant-numeric:tabular-nums;font-family:inherit;color:var(--text);
+  background:none;border:0;padding:0;margin:0;text-align:center;
+  -webkit-appearance:none;appearance:none;border-radius:0;min-width:1ch;
+  -webkit-user-select:text;user-select:text;
+}
+.readout .num:focus{outline:none}
+.readout .num.untouched{color:var(--muted)}
+.numruler{position:absolute;left:-9999px;top:0;visibility:hidden;white-space:pre}
 .readout .unit{font-size:20px;font-weight:700;color:var(--muted)}
 
 /* ---------- vertical slider ---------- */
-.sliderwrap{flex:1;min-height:110px;display:grid;grid-template-columns:58px 138px 58px;justify-content:center;padding:4px 0 8px}
+.sliderwrap{flex:1;min-height:110px;display:grid;grid-template-columns:58px 138px 58px;grid-template-rows:1fr;justify-content:center;align-items:end;padding:4px 0 8px}
 .sl{grid-column:2;position:relative;touch-action:none;-webkit-user-select:none;user-select:none;outline:none}
 .sl-track{position:absolute;inset:0;background:var(--surface-2);border:1px solid var(--line);border-radius:24px;overflow:hidden}
-.sl-fill{position:absolute;left:0;right:0;bottom:0;background:var(--accent)}
+.sl-fill{position:absolute;left:0;right:0;bottom:0;background:var(--co2)}
+.sl.gas-n2 .sl-fill{background:var(--n2)}
+.sl.gas-co2 .sl-fill{background:var(--co2)}
 .sl-thumb{
   position:absolute;top:0;left:-7px;right:-7px;height:54px;border-radius:16px;
   background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);
@@ -178,6 +191,29 @@ button{font:inherit;color:inherit;margin:0;touch-action:manipulation;cursor:poin
 .sl:focus-visible .sl-thumb{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft), var(--shadow)}
 .sl-ticks{position:absolute;top:0;bottom:0;left:-58px;width:50px;pointer-events:none}
 .sl-ticks span{position:absolute;right:0;transform:translateY(50%);font-size:13px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* ---------- a tank, alone or one of several ---------- */
+.tank{flex:1;min-height:0;display:flex;flex-direction:column}
+.tanks{flex:1;min-height:0;display:flex;gap:18px;padding:0 10px}
+.tank-compact{min-width:0}
+/* Every column reserves room for two buttons whether or not it has an i, so
+   the readouts line up across the row and the bars are measuring the same
+   space. Without it a column with an i has a shorter bar than one without,
+   which is the opposite of the point. */
+.tank-compact .titles{padding:6px 2px 4px;min-height:96px}
+.tank-compact .prompt-text{font-size:16px;line-height:1.3}
+.tank-compact .infobtn,.tank-compact .flagbtn{width:40px;height:40px;border-radius:12px}
+.tank-compact .readout .num{font-size:clamp(34px,4.4vw,48px)}
+.tank-compact .readout .unit{font-size:16px}
+.tank-compact .bubblewrap{padding:0 2px 4px}
+.tank-compact .bubbletip{right:24px}
+.tank-compact .bubble{font-size:13.5px;padding:9px 11px}
+.tank-compact .lastread{font-size:12.5px;padding:2px 2px 4px}
+.tank-compact .sliderwrap{grid-template-columns:44px 104px 44px;padding:2px 0 8px}
+.tank-compact .sl-ticks{left:-46px;width:40px}
+.tank-compact .sl-ticks span{font-size:11px}
+.tank-compact .btnrow{padding:0 2px}
+.tank-compact .btn{min-height:48px;font-size:16px}
 
 /* ---------- buttons ---------- */
 .controls{flex:none;display:flex;flex-direction:column;gap:10px;padding:6px 16px 14px}
@@ -463,13 +499,14 @@ var CONFIG = {
       type: "ln", name: "LN", tile: "LN", number: "3325", title: "LN",
       menu: 5, min: 0, max: 100,
       prompt: "Record the LN level.",
+      gas: "N2",              /* liquid nitrogen, so it is coloured as nitrogen */
       /* Bands are read top to bottom and the first one the reading falls
          into is the note that gets used. Put the most serious one first.
          Falling into any band also puts LN on the ordering list. */
       alerts: [
         { atOrBelow: 0,  note: "Empty LN" },
-        { atOrBelow: 9,  note: "LN <10%" },
-        { atOrBelow: 10, note: "LN at 10%" }
+        { atOrBelow: 19, note: "LN <20%" },
+        { atOrBelow: 20, note: "LN at 20%" }
       ]
     },
 
@@ -526,6 +563,37 @@ var CONFIG = {
     N2: "If the psi reads 0, briefly open the _top_ valve, record the psi, then re-tighten the valve."
   },
 
+  /* Alert bands for every tank of a gas, unless a tank carries its own
+     "alerts" list. Read top to bottom: the first band the reading falls into
+     is the note that gets used, so put the most serious one first. {value}
+     becomes the reading, which is what tells two low tanks in one room
+     apart. */
+  alertsByGas: {
+    CO2: [
+      { atOrBelow: 0,   note: "Empty CO2" },
+      { atOrBelow: 450, note: "Low CO2, {value} psi" }
+    ],
+    N2: [
+      { atOrBelow: 0,    note: "Empty N2" },
+      { atOrBelow: 1100, note: "Low N2, {value} psi" }
+    ]
+  },
+
+  /* The colour of the fill under a slider, by gas. LN is nitrogen, so it is
+     green too: green means nitrogen anywhere in the app, blue means CO2. */
+  gasColors: { N2: "n2", CO2: "co2" },
+
+  /* How tall a bar stands, by gas, as a share of the space available. An N2
+     cylinder is the tall one. The bars share a floor, so the difference
+     reads at a glance without anybody having to check the label. */
+  barScaleByGas: { N2: 1, CO2: 0.84 },
+
+  /* Below this, one reading fills the screen at a time. At or above it, a
+     room's tanks share a screen: a laptop has no reason to make you page
+     through them one at a time. Height counts as much as width, because the
+     bars need somewhere to stand. */
+  wideFrom: { width: 760, height: 540 },
+
   /* The counts on a menu button, in the order they are listed. A room with
      none of a gas simply does not show that line, and a stop that is not a
      room shows none of them. */
@@ -535,7 +603,7 @@ var CONFIG = {
   ],
 
   psiStep: 50,       /* dragging snaps to this many psi */
-  psiFineStep: 10,   /* the two small buttons under a psi slider */
+  psiFineStep: 50,   /* the two small buttons under a psi slider */
   pctStep: 1,        /* dragging the LN slider snaps to whole percents */
   pctFineStep: 1,    /* the two small buttons under the LN slider */
 
@@ -584,6 +652,9 @@ var CONFIG = {
     storePrompt: "Is the pH probe stored correctly?",
     storeButton: "Stored correctly",
     recalLater: "I recalibrated it today",
+    /* Shown quietly on the storage screen once the week's calibration is
+       settled, so whoever is second that week can see it was not skipped. */
+    verifiedLine: "Calibration verified by {who} on {date}.",
     alreadyLine: "Calibration checked and good, stored correctly",
     recalLine: "Recalibrated today, stored correctly",
     storeOnlyLine: "Stored correctly"
@@ -853,6 +924,7 @@ function screensForStop(si){
         prompt: tank.prompt || ("Record the psi for " + tank.label + "."),
         info: pick(tank.info, (CONFIG.infoByGas || {})[tank.gas]),
         label: tank.label,
+        gas: tank.gas,
         min: pick(tank.min, 0), max: pick(tank.max, 3000),
         step: CONFIG.psiStep, fine: CONFIG.psiFineStep,
         unit: "psi", start: tank.start
@@ -870,6 +942,7 @@ function screensForStop(si){
       kind: "ln", id: "ln|" + pick(stop.number, stop.title), stopIndex: si,
       prompt: stop.prompt || "Record the level.",
       label: pick(stop.title, "LN") + " level",
+      gas: pick(stop.gas, "N2"),
       min: pick(stop.min, 0), max: pick(stop.max, 100),
       step: CONFIG.pctStep, fine: CONFIG.pctFineStep,
       unit: "%", start: stop.start
@@ -964,7 +1037,17 @@ function snapTo(v, step, min, max){
   if (out > max) out = max;
   return Math.round(out*1000)/1000;
 }
+function clampTo(v, screen){
+  if (v < screen.min) v = screen.min;
+  if (v > screen.max) v = screen.max;
+  return Math.round(v * 1000) / 1000;
+}
+/* Where a slider opens: what this tank read last time, then whatever the
+   tank asks for, then halfway up. The last reading is not snapped, because
+   somebody may have typed it deliberately off the grid. */
 function defaultValue(screen){
+  var prev = lastValue(screen.id);
+  if (typeof prev === "number") return clampTo(prev, screen);
   if (typeof screen.start === "number") return snapTo(screen.start, screen.step, screen.min, screen.max);
   return snapTo((screen.min + screen.max)/2, screen.step, screen.min, screen.max);
 }
@@ -994,12 +1077,11 @@ function answerFor(screen){
 var state = {
   phase: "home",       /* home | menu | room | review | output */
   stopIndex: 0,        /* which room is open */
-  screenIndex: 0,      /* which screen inside that room */
+  pageIndex: 0,        /* which page inside that room */
   answers: {},
   flags: {},           /* screen id -> attention note, "" when none was typed */
   done: {},            /* screen id -> true once confirmed */
-  returnToReview: false,
-  original: null,      /* value to restore if an edit from review is cancelled */
+  touched: {},         /* screen id -> true once somebody moved or typed it */
   stats: null,         /* the last line, frozen once the message is first built */
   checkId: null        /* this check's own id, so a resend cannot double up */
 };
@@ -1041,8 +1123,18 @@ function phWeekDone(){
 }
 function setPhWeekDone(outcome){
   try {
-    localStorage.setItem(PH_KEY, JSON.stringify({ week: weekKey(), outcome: outcome }));
+    localStorage.setItem(PH_KEY, JSON.stringify({
+      week: weekKey(), outcome: outcome,
+      by: me ? me.name : "", at: new Date().toISOString()
+    }));
   } catch(e){}
+}
+function mdFrom(iso){
+  try {
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    return (d.getMonth() + 1) + "/" + d.getDate();
+  } catch(e){ return ""; }
 }
 
 function readSaved(){
@@ -1069,10 +1161,11 @@ function saveNow(){
   try {
     localStorage.setItem(STORE_KEY, JSON.stringify({
       v: 2, sig: SIGNATURE, day: dayKey(), savedAt: Date.now(),
-      phase: (state.phase === "review" || state.phase === "output") ? state.phase : "menu",
+      phase: (state.phase === "output") ? "output" : "menu",
       answers: state.answers,
       flags: state.flags,
-      done: state.done
+      done: state.done,
+      touched: state.touched
     }));
   } catch(e){}
 }
@@ -1277,10 +1370,10 @@ function buildMessage(){
 /* Only one slider is on screen at a time. render() shuts the previous one
    down, so a detached slider can never write a stale reading back into the
    answers when it sees a resize. */
-var activeSlider = null;
+var activeSliders = [];
 
 function makeSlider(opts){
-  /* opts: min, max, step, fine, unit, value, label, onInput */
+  /* opts: min, max, step, fine, unit, value, label, onInput, colour, scale */
   var THUMB = 54;
   var value = opts.value;
   var dead = false;
@@ -1300,14 +1393,22 @@ function makeSlider(opts){
   }
 
   var root = h("div", {
-    class: "sl", tabindex: "0", role: "slider",
+    class: "sl" + (opts.colour ? " gas-" + opts.colour : ""),
+    tabindex: "0", role: "slider",
     "aria-label": opts.label || "value",
     "aria-valuemin": String(opts.min), "aria-valuemax": String(opts.max)
   }, [track, thumb, ticks]);
+  /* A taller cylinder gets a taller bar, standing on the same floor as the
+     rest so the difference is the first thing you notice. Every bar gets a
+     height, not only the short ones: bottom aligned grid items size to their
+     content, and this one has none of its own. */
+  var barScale = (typeof opts.scale === "number" && opts.scale > 0 && opts.scale <= 1)
+    ? opts.scale : 1;
+  root.style.height = (barScale * 100) + "%";
 
   function fraction(){ return (value - opts.min) / (opts.max - opts.min); }
 
-  function paint(){
+  function paint(fromUser){
     if (dead) return;
     var hgt = root.clientHeight;
     var span = Math.max(1, hgt - THUMB);
@@ -1319,7 +1420,7 @@ function makeSlider(opts){
     }
     root.setAttribute("aria-valuenow", String(value));
     root.setAttribute("aria-valuetext", value + " " + opts.unit);
-    if (opts.onInput) opts.onInput(value);
+    if (opts.onInput) opts.onInput(value, !!fromUser);
   }
 
   function clamp(v){
@@ -1327,11 +1428,11 @@ function makeSlider(opts){
     if (v > opts.max) v = opts.max;
     return Math.round(v*1000)/1000;
   }
-  function setValue(v, haptic){
+  function setValue(v, haptic, fromUser){
     v = clamp(v);
     if (v === value) return;
     value = v;
-    paint();
+    paint(fromUser !== false);
     if (haptic) buzz();
   }
 
@@ -1385,22 +1486,24 @@ function makeSlider(opts){
     setValue(value + d);
   });
 
+  function repaint(){ paint(false); }
   var observer = null;
   if (window.ResizeObserver){
-    try { observer = new ResizeObserver(paint); observer.observe(root); } catch(err){}
+    try { observer = new ResizeObserver(repaint); observer.observe(root); } catch(err){}
   }
-  window.addEventListener("resize", paint);
-  requestAnimationFrame(paint);
+  window.addEventListener("resize", repaint);
+  requestAnimationFrame(repaint);
 
   return {
     el: root,
     get: function(){ return value; },
-    nudge: function(delta){ setValue(value + delta, true); },
+    nudge: function(delta){ setValue(value + delta, true, true); },
+    set: function(v){ setValue(v, false, true); },
     paint: paint,
     destroy: function(){
       dead = true;
       if (observer){ try { observer.disconnect(); } catch(err){} observer = null; }
-      window.removeEventListener("resize", paint);
+      window.removeEventListener("resize", repaint);
     }
   };
 }
@@ -1553,6 +1656,14 @@ function statsLine(){
 }
 
 /* What the last check read, for the hint under a reading. */
+function lastValue(id){
+  if (!lastCheck || !lastCheck.readings) return null;
+  for (var i = 0; i < lastCheck.readings.length; i++){
+    var r = lastCheck.readings[i];
+    if (r.id === id && typeof r.value === "number") return r.value;
+  }
+  return null;
+}
 function lastReading(id){
   if (!lastCheck || !lastCheck.readings) return null;
   for (var i = 0; i < lastCheck.readings.length; i++){
@@ -1616,6 +1727,16 @@ function checkPayload(){
     flags.push({ id: id, note: state.flags[id] });
   });
   var cal = state.answers["ph|cal"];
+  /* Who settled this week's calibration, and when, travels with the check.
+     Whoever comes next reads it off the last check and passes it on again,
+     so the sheet never has to be asked and the app never has to guess. */
+  var settled = phWeekDone();
+  var ph = { outcome: (cal && cal.outcome) || "", week: "", by: "", at: "" };
+  if (settled){
+    ph.week = weekKey();
+    ph.by = settled.by || "";
+    ph.at = settled.at || "";
+  }
   if (!state.checkId){
     state.checkId = dayKey() + "-" + Math.random().toString(36).slice(2, 10);
   }
@@ -1629,7 +1750,7 @@ function checkPayload(){
     date: todayMD(),
     day: dayKey(),
     week: weekKey(),
-    ph: { outcome: (cal && cal.outcome) || "", week: phWeekDone() ? weekKey() : "" },
+    ph: ph,
     readings: readings,
     flags: flags,
     message: buildMessage()
@@ -1795,6 +1916,8 @@ function alertBands(screen){
   }
 
   if (own && own.length) return own;
+  var byGas = (CONFIG.alertsByGas || {})[screen.gas];
+  if (byGas && byGas.length) return byGas;
   if (typeof limit !== "number") return [];
   return [{ atOrBelow: limit, note: fillGas(CONFIG.attention.emptyTankNote, gas) }];
 }
@@ -1811,7 +1934,7 @@ function autoNotes(screen){
     var bands = alertBands(screen);
     for (var i = 0; i < bands.length; i++){
       if (typeof bands[i].atOrBelow === "number" && v <= bands[i].atOrBelow){
-        out.push(bands[i].note);
+        out.push(fill(bands[i].note, { value: v, gas: screen.gas || "" }));
         break;   /* the first band the reading falls into wins */
       }
     }
@@ -1883,10 +2006,9 @@ function startFresh(){
   state.answers = {};
   state.flags = {};
   state.done = {};
+  state.touched = {};
   state.stopIndex = 0;
-  state.screenIndex = 0;
-  state.returnToReview = false;
-  state.original = null;
+  state.pageIndex = 0;
   state.stats = null;
   state.checkId = null;
   state.phase = "menu";
@@ -1900,99 +2022,87 @@ function resume(){
   state.answers = s.answers || {};
   state.flags = s.flags || {};
   state.done = s.done || {};
-  state.returnToReview = false;
-  state.original = null;
-  state.phase = (s.phase === "review" || s.phase === "output") ? s.phase : "menu";
+  state.touched = s.touched || {};
+  state.phase = (s.phase === "output") ? "output" : "menu";
   render();
 }
 function goMenu(){
   closeOverlay();
   state.phase = "menu";
-  state.returnToReview = false;
-  state.original = null;
   saveNow();
   render();
 }
 function openRoom(si){
   closeOverlay();
   state.stopIndex = si;
-  state.screenIndex = 0;
-  state.returnToReview = false;
-  state.original = null;
+  state.pageIndex = 0;
   state.phase = "room";
   render();
 }
-function currentScreens(){ return visitScreens(state.stopIndex); }
-function currentScreen(){
-  var scr = currentScreens();
-  return scr[Math.min(state.screenIndex, scr.length - 1)];
+/* Is there room to put a whole room's tanks side by side? Width alone is not
+   enough: the bars need somewhere to stand. */
+function wideLayout(){
+  var want = CONFIG.wideFrom || {};
+  return window.innerWidth >= (want.width || 760) &&
+         window.innerHeight >= (want.height || 540);
 }
 
-/* Confirming a screen first offers any flags the readings suggest, one after
-   another, and only then moves on. */
+/* What you actually page through. On a phone that is one screen at a time.
+   On anything larger a room's tanks share a page, while storage and the
+   probe keep pages of their own: they are a different sort of question. */
+function pagesForStop(si){
+  var screens = visitScreens(si);
+  if (!wideLayout()) return screens.map(function(x){ return [x]; });
+  var out = [], run = [];
+  screens.forEach(function(x){
+    if (x.kind === "psi"){ run.push(x); return; }
+    if (run.length){ out.push(run); run = []; }
+    out.push([x]);
+  });
+  if (run.length) out.push(run);
+  return out;
+}
+function currentPages(){ return pagesForStop(state.stopIndex); }
+function currentPage(){
+  var pages = currentPages();
+  if (!pages.length) return [];
+  return pages[Math.min(Math.max(state.pageIndex, 0), pages.length - 1)];
+}
+
+/* Confirming a page confirms everything on it, so a laptop and a phone
+   agree about what has been done. */
 function confirmScreen(){
-  var screen = currentScreen();
-  state.done[screen.id] = true;
+  currentPage().forEach(function(x){ state.done[x.id] = true; });
   advanceScreen();
 }
 function advanceScreen(){
-  if (state.returnToReview){
-    state.returnToReview = false;
-    state.original = null;
-    state.phase = "review";
-  } else if (state.screenIndex >= currentScreens().length - 1){
-    /* last screen of the room: back to the menu, with the room ticked off */
+  if (state.pageIndex >= currentPages().length - 1){
+    /* last page of the room: back to the menu, with the room ticked off */
     state.phase = "menu";
   } else {
-    state.screenIndex++;
+    state.pageIndex++;
   }
   saveNow();
   render();
 }
 function goBack(){
   closeOverlay();
-  if (state.returnToReview){
-    var s = currentScreen();
-    if (state.original === null || state.original === undefined) delete state.answers[s.id];
-    else state.answers[s.id] = state.original;
-    state.returnToReview = false;
-    state.original = null;
-    state.phase = "review";
-  } else if (state.screenIndex === 0){
-    state.phase = "menu";
-  } else {
-    state.screenIndex--;
-  }
+  if (state.pageIndex === 0) state.phase = "menu";
+  else state.pageIndex--;
   saveNow();
-  render();
-}
-/* Opened from the review list to fix one reading, then straight back. */
-function editScreen(si, idx){
-  closeOverlay();
-  state.stopIndex = si;
-  state.screenIndex = idx;
-  state.returnToReview = true;
-  var s = currentScreen();
-  var cur = state.answers[s.id];
-  state.original = (cur === undefined) ? null : JSON.parse(JSON.stringify(cur));
-  state.phase = "room";
   render();
 }
 
 /* ---------- screen chrome ---------- */
 function topBar(){
   var stop = CONFIG.route[state.stopIndex];
-  var scr = currentScreens();
+  var pages = currentPages();
   var where = pick(stop.tile, stop.name) + (stop.number ? " (" + stop.number + ")" : "");
   return h("div", { class:"topbar" }, [
     h("button", {
-      class:"iconbtn", type:"button",
-      "aria-label": state.returnToReview ? "Cancel this edit" : "Back to the room menu",
-      onclick: goBack
-    }, state.returnToReview
-        ? [h("span", { text:"Cancel" })]
-        : [h("span", { class:"chev", html: ICON.back }), h("span", { text: where })]),
-    h("div", { class:"step", text: (state.screenIndex + 1) + " of " + scr.length })
+      class:"iconbtn", type:"button", "aria-label":"Back to the room menu", onclick: goBack
+    }, [h("span", { class:"chev", html: ICON.back }), h("span", { text: where })]),
+    h("div", { class:"step", text: (state.pageIndex + 1) + " of " + pages.length })
   ]);
 }
 function progressBar(done, total){
@@ -2013,18 +2123,19 @@ function richText(str){
 
 /* The circled i keeps its open or closed state only while you are on the
    same screen; moving on closes it. */
-var infoOpen = false, infoFor = null;
-function setInfoFor(id){
-  if (infoFor !== id){ infoFor = id; infoOpen = false; }
+var infoOpen = {}, infoPage = null;
+function setInfoPage(key){
+  if (infoPage !== key){ infoPage = key; infoOpen = {}; }
 }
 function infoButton(screen){
+  var open = !!infoOpen[screen.id];
   return h("button", {
-    class: "infobtn" + (infoOpen ? " on" : ""),
+    class: "infobtn" + (open ? " on" : ""),
     type: "button",
-    "aria-expanded": infoOpen ? "true" : "false",
+    "aria-expanded": open ? "true" : "false",
     "aria-label": "How to do this step",
     html: ICON.info,
-    onclick: function(){ infoOpen = !infoOpen; render(); }
+    onclick: function(){ infoOpen[screen.id] = !open; render(); }
   });
 }
 function flagButton(screen){
@@ -2039,17 +2150,17 @@ function flagButton(screen){
   });
 }
 /* The sentence at the top of a screen, with the i and the warning beside it. */
-function promptRow(screen){
+function promptRow(screen, compact){
   var text = h("div", { class:"prompt-text" });
   text.appendChild(richText(screen.prompt));
   /* The buttons stack rather than sit side by side: two of them in a row
      squeezed the sentence onto a second line. */
   var side = h("div", { class:"sidebtns" }, [flagButton(screen)]);
   if (screen.info) side.appendChild(infoButton(screen));
-  return h("div", { class:"titles" }, [text, side]);
+  return h("div", { class: "titles" + (compact ? " titles-compact" : "") }, [text, side]);
 }
 function infoBubble(screen){
-  if (!infoOpen || !screen.info) return null;
+  if (!infoOpen[screen.id] || !screen.info) return null;
   var body = h("div", { class:"bubble" });
   body.appendChild(richText(screen.info));
   return h("div", { class:"bubblewrap" }, [h("i", { class:"bubbletip" }), body]);
@@ -2057,44 +2168,123 @@ function infoBubble(screen){
 function confirmButton(label){
   return h("button", { class:"btn btn-primary", type:"button", onclick: confirmScreen }, [
     h("span", { class:"chev", html: ICON.check }),
-    h("span", { text: label || (state.returnToReview ? "Save" : "Confirm") })
+    h("span", { text: label || "Confirm" })
   ]);
 }
 
 
 /* ---------- screens ---------- */
-function screenSlider(screen){
-  var readNum = h("div", { class:"num", text:"0" });
-  var wrap = h("div", { class:"sliderwrap" });
+/* Measures the readout so the field can be exactly as wide as its digits and
+   nothing shifts when the number changes. */
+var numRuler = null;
+function fitNumber(input){
+  if (!numRuler){
+    numRuler = h("span", { class:"numruler" });
+    document.body.appendChild(numRuler);
+  }
+  var cs = getComputedStyle(input);
+  numRuler.style.fontSize = cs.fontSize;
+  numRuler.style.fontWeight = cs.fontWeight;
+  numRuler.style.fontFamily = cs.fontFamily;
+  numRuler.style.letterSpacing = cs.letterSpacing;
+  numRuler.style.fontVariantNumeric = cs.fontVariantNumeric;
+  numRuler.textContent = input.value || "0";
+  input.style.width = (numRuler.offsetWidth + 3) + "px";
+}
 
+/* One tank: its sentence, its number, its bar and its two nudges. The same
+   thing whether it has the screen to itself or is one of three. */
+function tankUnit(screen, compact){
+  var touched = !!state.touched[screen.id];
+
+  var num = h("input", {
+    class: "num" + (touched ? "" : " untouched"),
+    type: "text", inputmode: "numeric", autocomplete: "off", spellcheck: "false",
+    "aria-label": screen.prompt
+  });
+
+  var wrap = h("div", { class:"sliderwrap" });
   var slider = makeSlider({
     min: screen.min, max: screen.max, step: screen.step, unit: screen.unit,
     value: answerFor(screen), label: screen.prompt,
-    onInput: function(v){
-      readNum.textContent = String(v);
+    colour: (CONFIG.gasColors || {})[screen.gas],
+    scale: (CONFIG.barScaleByGas || {})[screen.gas],
+    onInput: function(v, fromUser){
+      if (document.activeElement !== num){
+        num.value = String(v);
+        fitNumber(num);
+      }
       state.answers[screen.id] = v;
+      if (fromUser && !state.touched[screen.id]){
+        state.touched[screen.id] = true;
+        num.classList.remove("untouched");
+      }
       save();
     }
   });
   wrap.appendChild(slider.el);
-  activeSlider = slider;
+  activeSliders.push(slider);
+
+  num.value = String(answerFor(screen));
+  requestAnimationFrame(function(){ fitNumber(num); });
+
+  /* Typed values are taken exactly: the reason to type rather than drag is
+     usually that you want a number the bar cannot land on. */
+  num.addEventListener("focus", function(){ setTimeout(function(){ num.select(); }, 0); });
+  num.addEventListener("input", function(){
+    var cleaned = num.value.replace(/[^0-9]/g, "");
+    if (cleaned !== num.value) num.value = cleaned;
+    fitNumber(num);
+    if (cleaned === "") return;
+    state.touched[screen.id] = true;
+    num.classList.remove("untouched");
+    slider.set(clampTo(parseInt(cleaned, 10), screen));
+  });
+  function commit(){
+    var v = parseInt(num.value, 10);
+    if (isNaN(v)) v = answerFor(screen);
+    v = clampTo(v, screen);
+    slider.set(v);
+    num.value = String(v);
+    fitNumber(num);
+  }
+  num.addEventListener("blur", commit);
+  num.addEventListener("keydown", function(e){
+    if (e.key === "Enter"){ e.preventDefault(); num.blur(); }
+  });
 
   var fineLabel = function(n){ return (n > 0 ? "+" : "") + n; };
-  return h("div", { class:"screen" }, [
-    promptRow(screen),
+  var nudges = h("div", { class:"btnrow" }, [
+    h("button", { class:"btn", type:"button", "aria-label":"minus " + screen.fine + " " + screen.unit,
+      onclick: function(){ slider.nudge(-screen.fine); } }, fineLabel(-screen.fine)),
+    h("button", { class:"btn", type:"button", "aria-label":"plus " + screen.fine + " " + screen.unit,
+      onclick: function(){ slider.nudge(screen.fine); } }, fineLabel(screen.fine))
+  ]);
+
+  return h("div", { class: "tank" + (compact ? " tank-compact" : "") }, [
+    promptRow(screen, compact),
     infoBubble(screen),
     lastReadingRow(screen),
-    h("div", { class:"readout" }, [readNum, h("div", { class:"unit", text: screen.unit })]),
+    h("div", { class:"readout" }, [num, h("div", { class:"unit", text: screen.unit })]),
     wrap,
-    h("div", { class:"controls" }, [
-      h("div", { class:"btnrow" }, [
-        h("button", { class:"btn", type:"button", "aria-label":"minus " + screen.fine + " " + screen.unit,
-          onclick: function(){ slider.nudge(-screen.fine); } }, fineLabel(-screen.fine)),
-        h("button", { class:"btn", type:"button", "aria-label":"plus " + screen.fine + " " + screen.unit,
-          onclick: function(){ slider.nudge(screen.fine); } }, fineLabel(screen.fine))
-      ]),
-      confirmButton()
-    ])
+    nudges
+  ]);
+}
+
+function screenSlider(screen){
+  return h("div", { class:"screen" }, [
+    tankUnit(screen, false),
+    h("div", { class:"controls" }, [confirmButton()])
+  ]);
+}
+
+/* A room's tanks side by side, for a screen with the room to show them. */
+function screenTanks(page){
+  var row = h("div", { class:"tanks" });
+  page.forEach(function(sc){ row.appendChild(tankUnit(sc, true)); });
+  return h("div", { class:"screen" }, [
+    row,
+    h("div", { class:"controls" }, [confirmButton()])
   ]);
 }
 
@@ -2180,7 +2370,7 @@ function screenStorage(screen){
     ? confirmButton()
     : h("button", { class:"btn btn-blocked", type:"button",
         onclick: function(){ toast(words.unanswered); } },
-        [h("span", { text: state.returnToReview ? "Save" : "Confirm" })]);
+        [h("span", { text:"Confirm" })]);
 
   return h("div", { class:"screen" }, [
     promptRow(screen),
@@ -2218,6 +2408,11 @@ function screenPhStore(screen){
   var cal = state.answers["ph|cal"];
   var settled = phWeekDone();
   var recalNow = !!(settled && cal && cal.outcome === "recal");
+  /* Quiet, but there: somebody second that week can see it was not skipped. */
+  var verified = (settled && settled.by)
+    ? h("div", { class:"lastread", text: fill(CONFIG.ph.verifiedLine, {
+        who: settled.by, date: mdFrom(settled.at) }) })
+    : null;
 
   var controls = [
     h("button", { class:"btn btn-primary", type:"button", onclick: function(){
@@ -2246,58 +2441,9 @@ function screenPhStore(screen){
   return h("div", { class:"screen" }, [
     promptRow(screen),
     infoBubble(screen),
+    verified,
     h("div", { class:"center" }),
     h("div", { class:"controls" }, controls)
-  ]);
-}
-function reviewValue(screen){
-  var a = answerFor(screen);
-  if (screen.kind === "psi")     return { text: a + " psi", small:false };
-  if (screen.kind === "ln")      return { text: a + "%", small:false };
-  if (screen.kind === "storage") return { text: storageText(a), small:true };
-  if (screen.kind === "phcal")   return { text: (a && a.outcome === "recal") ? "Recalibrated today" : "Checked and good", small:true };
-  if (screen.kind === "phstore") return { text: "Stored correctly", small:true };
-  return { text:"", small:true };
-}
-function screenReview(){
-  var list = h("div", { class:"pad" });
-
-  messageStops().forEach(function(entry){
-    var stop = entry.stop, si = entry.si;
-    var scr = visitScreens(si);
-    if (!scr.length) return;
-    list.appendChild(h("div", { class:"group",
-      text: stop.name + (stop.number ? " (" + stop.number + ")" : "") }));
-    scr.forEach(function(s, idx){
-      var v = reviewValue(s);
-      list.appendChild(h("button", { class:"item", type:"button",
-        onclick: function(){ editScreen(si, idx); } }, [
-        attentionFor(s) === null ? null : h("div", { class:"flag", html: ICON.warnSm }),
-        h("div", { class:"who", text: s.label }),
-        h("div", { class:"what" + (v.small ? " small" : ""), text: v.text }),
-        h("div", { class:"chev", html: ICON.chev })
-      ]));
-    });
-  });
-
-  return h("div", { class:"app" }, [
-    h("div", { class:"topbar" }, [
-      h("button", { class:"iconbtn", type:"button", onclick: goMenu },
-        [h("span", { class:"chev", html: ICON.back }), h("span", { text:"Rooms" })])
-    ]),
-    progressBar(1,1),
-    h("div", { class:"screen" }, [
-      h("div", { class:"hero" }, [
-        h("h1", { text:"Review" }),
-        h("p", { text:"Tap anything to fix it." })
-      ]),
-      h("div", { class:"scroll" }, list),
-      h("div", { class:"controls" }, [
-        h("button", { class:"btn btn-primary", type:"button", onclick: function(){
-          state.phase = "output"; saveNow(); render();
-        }}, [h("span", { text:"Build Slack message" }), h("span", { class:"chev", html: ICON.chev })])
-      ])
-    ])
   ]);
 }
 var clearArmed = false, clearTimer = null;
@@ -2366,8 +2512,8 @@ function screenOutput(){
 
   return h("div", { class:"app" }, [
     h("div", { class:"topbar" }, [
-      h("button", { class:"iconbtn", type:"button", onclick: function(){ state.phase = "review"; render(); } },
-        [h("span", { class:"chev", html: ICON.back }), h("span", { text:"Review" })])
+      h("button", { class:"iconbtn", type:"button", onclick: goMenu },
+        [h("span", { class:"chev", html: ICON.back }), h("span", { text:"Rooms" })])
     ]),
     progressBar(1,1),
     h("div", { class:"screen" }, [
@@ -2535,7 +2681,7 @@ function screenMenu(){
     class: "btn " + (ready ? "btn-primary" : "btn-blocked"),
     type: "button",
     onclick: ready
-      ? function(){ state.phase = "review"; saveNow(); render(); }
+      ? function(){ state.phase = "output"; saveNow(); render(); }
       : function(){ toast(left === 1 ? "One room still to check." : left + " rooms still to check."); }
   }, ready
       ? [h("span", { text:"Build Slack message" }), h("span", { class:"chev", html: ICON.chev })]
@@ -2766,7 +2912,8 @@ function legacyCopy(text){
 
 /* ---------- render ---------- */
 function render(){
-  if (activeSlider){ activeSlider.destroy(); activeSlider = null; }
+  activeSliders.forEach(function(sl){ sl.destroy(); });
+  activeSliders = [];
   var root = document.getElementById("app");
   var next;
 
@@ -2782,24 +2929,29 @@ function render(){
     next = screenHome();
   } else if (state.phase === "menu"){
     next = screenMenu();
-  } else if (state.phase === "review"){
-    next = screenReview();
   } else if (state.phase === "output"){
     next = screenOutput();
   } else {
-    var scr = currentScreens();
-    if (state.screenIndex > scr.length - 1) state.screenIndex = scr.length - 1;
-    if (state.screenIndex < 0) state.screenIndex = 0;
-    var screen = scr[state.screenIndex];
-    setInfoFor(screen.id);
-    var inner =
-      (screen.kind === "psi" || screen.kind === "ln") ? screenSlider(screen) :
-      screen.kind === "storage"  ? screenStorage(screen) :
-      screen.kind === "phcal"    ? screenPhCal(screen) :
-                                   screenPhStore(screen);
+    var pages = currentPages();
+    if (state.pageIndex > pages.length - 1) state.pageIndex = pages.length - 1;
+    if (state.pageIndex < 0) state.pageIndex = 0;
+    var page = pages[state.pageIndex] || [];
+    setInfoPage(state.stopIndex + ":" + state.pageIndex);
+
+    var inner;
+    if (page.length > 1){
+      inner = screenTanks(page);
+    } else {
+      var screen = page[0];
+      inner =
+        (screen.kind === "psi" || screen.kind === "ln") ? screenSlider(screen) :
+        screen.kind === "storage"  ? screenStorage(screen) :
+        screen.kind === "phcal"    ? screenPhCal(screen) :
+                                     screenPhStore(screen);
+    }
     next = h("div", { class:"app" }, [
       topBar(),
-      progressBar(state.screenIndex + 1, scr.length),
+      progressBar(state.pageIndex + 1, pages.length),
       inner
     ]);
   }
@@ -2807,6 +2959,18 @@ function render(){
   next.id = "app";
   root.parentNode.replaceChild(next, root);
 }
+/* A tablet turned on its side, or a window dragged wider, changes whether a
+   room's tanks fit together. Only redraw when the answer actually flips. */
+var lastWide = null;
+window.addEventListener("resize", function(){
+  var now = wideLayout();
+  if (lastWide === null){ lastWide = now; return; }
+  if (now === lastWide) return;
+  lastWide = now;
+  if (state.phase === "room") state.pageIndex = 0;
+  render();
+});
+
 /* ---------- go ---------- */
 saved = readSaved();
 loadMe();
