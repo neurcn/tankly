@@ -73,10 +73,13 @@ if there is no previous reading to go on. A value nobody has touched yet is
 shown **greyed**, and turns solid the moment it is dragged or typed, so
 "I confirmed without looking" is visible at a glance.
 
-N₂ bars are **green and stand taller** than the **blue** CO₂ ones, sharing a
-floor so the difference reads without checking the label. LN is green too: it
-is nitrogen. The colours live in `CONFIG.gasColors`, the heights in
-`CONFIG.barScaleByGas`.
+N₂ bars are **green and stand taller** than the **blue** CO₂ ones, the shorter
+bar centred in the space the taller one fills. Each carries its gas written
+faintly down the length of it, under the thumb but over the colour, so a bar
+is identifiable at a glance whether or not the fill has reached the middle.
+LN is green too: it is nitrogen.
+
+The colours live in `CONFIG.gasColors`, the heights in `CONFIG.barScaleByGas`.
 
 ## One screen or three
 
@@ -85,10 +88,21 @@ tanks share a screen**, so Secondary is two pages rather than four, and the
 green bar tells you which one is the N₂ at a glance. Storage and the probe
 keep pages of their own either way: they are a different sort of question.
 
+A shared page says it once rather than per column: a single line at the top
+naming the gases on it, each in its own colour, and **one** ⚠ that asks which
+tanks it applies to with a checkbox each, so one note can cover two or three
+of them. Each column keeps its own ⓘ, whose note is about that tank alone.
+
 The switch is by window size, `CONFIG.wideFrom`, and height counts as much as
 width because the bars need somewhere to stand. Turning a tablet on its side
 re-lays it out. Both layouts confirm the same readings, so a round started on
 one and finished on the other agrees with itself.
+
+## Throwing a check away
+
+**Discard this check** at the foot of the room menu bins everything walked so
+far and starts clean. It takes two taps, because there is no getting a walked
+round back.
 
 ## ATTENTION lines
 
@@ -101,10 +115,8 @@ the message is built, so correcting a reading corrects its note too.
 
 | Reading | Note |
 | --- | --- |
-| A CO₂ tank at 0 psi | `Empty CO2` |
-| A CO₂ tank at 450 psi or less | `Low CO2, 400 psi` |
-| An N₂ tank at 0 psi | `Empty N2` |
-| An N₂ tank at 1100 psi or less | `Low N2, 900 psi` |
+| A tank at 0 psi | `Empty CO2` or `Empty N2` |
+| A tank at 400 psi or less | `Low CO2, 350 psi` |
 | LN at 0% | `Empty LN` |
 | LN from 1 to 19% | `LN <20%` |
 | LN at exactly 20% | `LN at 20%` |
@@ -390,6 +402,8 @@ reads `Storage: none`.
 | `alertsByGas` | Alert bands for every tank of a gas. `{value}` becomes the reading, which is what tells two low tanks in one room apart. |
 | `gasColors`, `barScaleByGas` | The colour and height of a bar, by gas. |
 | `wideFrom` | The window size at which a room's tanks start sharing a screen. |
+| `multiPrompt` | The single line at the top of a shared page. `{gases}` becomes the gases on it. |
+| `discard` | The wording of Discard this check. |
 | `alertAtOrBelow` | A tank at or below this reading offers an alert. Default 0, meaning only a completely empty tank. A stop can replace it outright with `alerts` bands, the way LN does. |
 | `storageItems` | The four counter rows and how they are worded in the message. |
 | `ph` | Every word on the two probe screens and the three lines they can produce. |

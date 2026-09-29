@@ -174,7 +174,7 @@ button{font:inherit;color:inherit;margin:0;touch-action:manipulation;cursor:poin
 .readout .unit{font-size:20px;font-weight:700;color:var(--muted)}
 
 /* ---------- vertical slider ---------- */
-.sliderwrap{flex:1;min-height:110px;display:grid;grid-template-columns:58px 138px 58px;grid-template-rows:1fr;justify-content:center;align-items:end;padding:4px 0 8px}
+.sliderwrap{flex:1;min-height:110px;display:grid;grid-template-columns:58px 138px 58px;grid-template-rows:1fr;justify-content:center;align-items:center;padding:4px 0 8px}
 .sl{grid-column:2;position:relative;touch-action:none;-webkit-user-select:none;user-select:none;outline:none}
 .sl-track{position:absolute;inset:0;background:var(--surface-2);border:1px solid var(--line);border-radius:24px;overflow:hidden}
 .sl-fill{position:absolute;left:0;right:0;bottom:0;background:var(--co2)}
@@ -200,7 +200,24 @@ button{font:inherit;color:inherit;margin:0;touch-action:manipulation;cursor:poin
    the readouts line up across the row and the bars are measuring the same
    space. Without it a column with an i has a shorter bar than one without,
    which is the opposite of the point. */
-.tank-compact .titles{padding:6px 2px 4px;min-height:96px}
+.colhead{flex:none;display:flex;justify-content:flex-end;align-items:flex-start;min-height:44px;padding:2px 2px 0}
+.gastext{font-weight:800}
+.gastext.gas-n2{color:var(--n2)}
+.gastext.gas-co2{color:var(--co2)}
+.sl-mark{
+  position:absolute;left:50%;top:50%;
+  transform:translate(-50%,-50%) rotate(-90deg);
+  font-size:34px;font-weight:800;letter-spacing:.04em;white-space:nowrap;
+  color:var(--text);opacity:.25;pointer-events:none;
+}
+.tank-compact .sl-mark{font-size:26px}
+.picklist{display:flex;flex-direction:column;gap:2px;margin:2px 0 4px}
+.pickrow{display:flex;align-items:flex-start;gap:11px;padding:9px 4px;border-radius:12px}
+.pickrow:active{background:var(--surface-2)}
+.pickrow input{width:22px;height:22px;flex:none;margin-top:1px;accent-color:var(--accent)}
+.pickbody{flex:1;min-width:0}
+.picklabel{font-size:16px;font-weight:700}
+.pickauto{margin-top:2px;font-size:13.5px;font-weight:600;color:var(--warn);line-height:1.35}
 .tank-compact .prompt-text{font-size:16px;line-height:1.3}
 .tank-compact .infobtn,.tank-compact .flagbtn{width:40px;height:40px;border-radius:12px}
 .tank-compact .readout .num{font-size:clamp(34px,4.4vw,48px)}
@@ -571,11 +588,11 @@ var CONFIG = {
   alertsByGas: {
     CO2: [
       { atOrBelow: 0,   note: "Empty CO2" },
-      { atOrBelow: 450, note: "Low CO2, {value} psi" }
+      { atOrBelow: 400, note: "Low CO2, {value} psi" }
     ],
     N2: [
-      { atOrBelow: 0,    note: "Empty N2" },
-      { atOrBelow: 1100, note: "Low N2, {value} psi" }
+      { atOrBelow: 0,   note: "Empty N2" },
+      { atOrBelow: 400, note: "Low N2, {value} psi" }
     ]
   },
 
@@ -587,6 +604,14 @@ var CONFIG = {
      cylinder is the tall one. The bars share a floor, so the difference
      reads at a glance without anybody having to check the label. */
   barScaleByGas: { N2: 1, CO2: 0.84 },
+
+  /* The single line at the top of a page carrying several tanks, in place of
+     one sentence per tank. {gases} becomes the gases on that page, each in
+     its own colour, listed once however many tanks of it there are. */
+  multiPrompt: "Record the psi for the {gases} tanks.",
+
+  /* Throwing away a half walked check from the room menu. */
+  discard: { label: "Discard this check", confirm: "Tap again to discard" },
 
   /* Below this, one reading fills the screen at a time. At or above it, a
      room's tanks share a screen: a laptop has no reason to make you page
@@ -1380,6 +1405,11 @@ function makeSlider(opts){
 
   var fill  = h("div", { class:"sl-fill" });
   var track = h("div", { class:"sl-track" }, fill);
+  /* Inside the track, so it is clipped by it and painted over the colour;
+     the thumb lives outside the track and so stays on top of both. */
+  if (opts.mark){
+    track.appendChild(h("div", { class:"sl-mark", text: opts.mark }));
+  }
   var thumb = h("div", { class:"sl-thumb" }, [h("i"), h("i"), h("i")]);
   var ticks = h("div", { class:"sl-ticks" });
   var tickEls = [];
@@ -1398,10 +1428,10 @@ function makeSlider(opts){
     "aria-label": opts.label || "value",
     "aria-valuemin": String(opts.min), "aria-valuemax": String(opts.max)
   }, [track, thumb, ticks]);
-  /* A taller cylinder gets a taller bar, standing on the same floor as the
-     rest so the difference is the first thing you notice. Every bar gets a
-     height, not only the short ones: bottom aligned grid items size to their
-     content, and this one has none of its own. */
+  /* A taller cylinder gets a taller bar, centred in the space the tallest
+     one would fill, so a short bar is not left with a pool of empty space
+     under it. Every bar gets a height, not only the short ones: a grid item
+     that is not stretched sizes to its content, and this one has none. */
   var barScale = (typeof opts.scale === "number" && opts.scale > 0 && opts.scale <= 1)
     ? opts.scale : 1;
   root.style.height = (barScale * 100) + "%";
@@ -2194,7 +2224,7 @@ function fitNumber(input){
 
 /* One tank: its sentence, its number, its bar and its two nudges. The same
    thing whether it has the screen to itself or is one of three. */
-function tankUnit(screen, compact){
+function tankUnit(screen, compact, withHeader){
   var touched = !!state.touched[screen.id];
 
   var num = h("input", {
@@ -2209,6 +2239,9 @@ function tankUnit(screen, compact){
     value: answerFor(screen), label: screen.prompt,
     colour: (CONFIG.gasColors || {})[screen.gas],
     scale: (CONFIG.barScaleByGas || {})[screen.gas],
+    mark: (screen.kind === "ln")
+      ? pick(CONFIG.route[screen.stopIndex].title, "LN")
+      : gasLabel(screen.gas),
     onInput: function(v, fromUser){
       if (document.activeElement !== num){
         num.value = String(v);
@@ -2261,8 +2294,16 @@ function tankUnit(screen, compact){
       onclick: function(){ slider.nudge(screen.fine); } }, fineLabel(screen.fine))
   ]);
 
+  /* On a shared page the sentence and the warning live once, at the top of
+     the page. A column keeps only its own i, whose note is about that tank
+     and nothing else, in a row that reserves its height either way so the
+     columns stay level. */
+  var head = withHeader
+    ? promptRow(screen, compact)
+    : h("div", { class:"colhead" }, screen.info ? [infoButton(screen)] : []);
+
   return h("div", { class: "tank" + (compact ? " tank-compact" : "") }, [
-    promptRow(screen, compact),
+    head,
     infoBubble(screen),
     lastReadingRow(screen),
     h("div", { class:"readout" }, [num, h("div", { class:"unit", text: screen.unit })]),
@@ -2273,16 +2314,108 @@ function tankUnit(screen, compact){
 
 function screenSlider(screen){
   return h("div", { class:"screen" }, [
-    tankUnit(screen, false),
+    tankUnit(screen, false, true),
     h("div", { class:"controls" }, [confirmButton()])
   ]);
+}
+
+/* "Record the psi for the CO2 and N2 tanks.", each gas in its own colour and
+   named once however many tanks of it are on the page. */
+function multiPromptText(page){
+  var gases = [];
+  page.forEach(function(sc){
+    if (sc.gas && gases.indexOf(sc.gas) < 0) gases.push(sc.gas);
+  });
+  var text = h("div", { class:"prompt-text" });
+  var parts = String(CONFIG.multiPrompt || "Record the psi for the {gases} tanks.").split("{gases}");
+  text.appendChild(document.createTextNode(parts[0] || ""));
+  gases.forEach(function(g, i){
+    if (i > 0){
+      text.appendChild(document.createTextNode(i === gases.length - 1 ? " and " : ", "));
+    }
+    text.appendChild(h("span", {
+      class: "gastext gas-" + ((CONFIG.gasColors || {})[g] || ""),
+      text: gasLabel(g)
+    }));
+  });
+  text.appendChild(document.createTextNode(parts[1] || ""));
+  return text;
+}
+
+/* One warning for the whole page, which then asks which tanks it is about. */
+function multiFlagButton(page){
+  var on = page.some(function(sc){ return attentionFor(sc) !== null; });
+  return h("button", {
+    class: "flagbtn" + (on ? " on" : ""),
+    type: "button",
+    "aria-pressed": on ? "true" : "false",
+    "aria-label": "Flag one or more of these tanks",
+    html: ICON.warn,
+    onclick: function(){ openMultiFlagSheet(page); }
+  });
+}
+
+function openMultiFlagSheet(page){
+  var picks = [];
+  var existing = [];
+
+  var list = h("div", { class:"picklist" });
+  page.forEach(function(sc){
+    var flagged = state.flags[sc.id] !== undefined;
+    if (flagged) existing.push(String(state.flags[sc.id] || "").trim());
+
+    var box = h("input", { type:"checkbox" });
+    box.checked = flagged;
+    picks.push({ screen: sc, box: box });
+
+    var auto = autoNotes(sc);
+    list.appendChild(h("label", { class:"pickrow" }, [
+      box,
+      h("div", { class:"pickbody" }, [
+        h("div", { class:"picklabel", text: sc.label }),
+        auto.length ? h("div", { class:"pickauto", text: auto.join(CONFIG.attention.join) }) : null
+      ])
+    ]));
+  });
+
+  /* Only prefill when every flagged tank says the same thing, or the field
+     would quietly overwrite one note with another. */
+  var distinct = existing.filter(function(v, i, a){ return a.indexOf(v) === i; });
+  var ta = h("textarea", {
+    class:"note", rows:"3", maxlength:"140",
+    placeholder: CONFIG.attention.notePlaceholder, "aria-label":"Note"
+  });
+  ta.value = (distinct.length === 1) ? distinct[0] : "";
+
+  function done(){ closeOverlay(); render(); }
+
+  showOverlay(h("div", { class:"sheet" }, [
+    h("h2", { text: CONFIG.attention.sheetTitle }),
+    list,
+    ta,
+    h("button", { class:"btn btn-primary", type:"button", onclick: function(){
+      picks.forEach(function(pick){
+        if (pick.box.checked) state.flags[pick.screen.id] = ta.value.trim();
+        else delete state.flags[pick.screen.id];
+      });
+      saveNow();
+      done();
+    }}, [h("span", { class:"chev", html: ICON.check }), h("span", { text:"Confirm" })]),
+    h("button", { class:"btn btn-quiet", type:"button", onclick: done }, "Cancel")
+  ]), done, false);
+
+  setTimeout(function(){ try { ta.focus(); } catch(e){} }, 60);
 }
 
 /* A room's tanks side by side, for a screen with the room to show them. */
 function screenTanks(page){
   var row = h("div", { class:"tanks" });
-  page.forEach(function(sc){ row.appendChild(tankUnit(sc, true)); });
+  page.forEach(function(sc){ row.appendChild(tankUnit(sc, true, false)); });
   return h("div", { class:"screen" }, [
+    h("div", { class:"titles" }, [
+      multiPromptText(page),
+      h("div", { class:"sidebtns" }, [multiFlagButton(page)])
+    ]),
     row,
     h("div", { class:"controls" }, [confirmButton()])
   ]);
@@ -2647,6 +2780,8 @@ function screenNewEmoji(){
 
 
 /* ---------- the room menu ---------- */
+var discardArmed = false, discardTimer = null;
+
 function screenMenu(){
   var grid = h("div", { class:"menu" });
 
@@ -2688,6 +2823,24 @@ function screenMenu(){
       : [h("span", { text:"Build Slack message" }),
          h("span", { class:"leftnote", text: left === 1 ? "1 room left" : left + " rooms left" })]);
 
+  /* Two taps, because there is no getting a walked round back. */
+  var discard = h("button", { class:"linkbtn", type:"button" }, CONFIG.discard.label);
+  discard.addEventListener("click", function(){
+    if (!discardArmed){
+      discardArmed = true;
+      discard.textContent = CONFIG.discard.confirm;
+      clearTimeout(discardTimer);
+      discardTimer = setTimeout(function(){
+        discardArmed = false;
+        discard.textContent = CONFIG.discard.label;
+      }, 4000);
+      return;
+    }
+    discardArmed = false;
+    clearTimeout(discardTimer);
+    startFresh();
+  });
+
   return h("div", { class:"app" }, [
     h("div", { class:"menuhead" }, [
       h("h1", { text: CONFIG.appTitle }),
@@ -2700,7 +2853,7 @@ function screenMenu(){
         me ? ((me.emoji ? me.emoji + " " : "") + me.initials) : "?")
     ]),
     grid,
-    h("div", { class:"controls" }, [build])
+    h("div", { class:"controls" }, [build, discard])
   ]);
 }
 
