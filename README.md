@@ -299,7 +299,17 @@ September Checks: 12 | #1 🥇 | 2 🔥
 **The count and the placing cover the current calendar month** and start again
 on the 1st. The count includes the check being copied, because the sheet
 cannot know about it until a moment after that line is written. A medal for
-the top three, a bare `#4` below that, and a tie takes the better place.
+the top three and a bare `#4` below that.
+
+**A tie takes the better place and says whose company it is in**, because the
+spot belongs to everybody on that count:
+
+```
+October Checks: 5 | Tied #1 🥇 with 🐭 ABC and 🚀 XYZ
+```
+
+Both of them read `#1`, the way a race does. The names are the people level
+with you, most recent publisher first.
 
 **The streak does not reset with the month.** It counts checks in a row at the
 end of the log that are yours, so publishing the last check of September and
@@ -446,6 +456,7 @@ reads `Storage: none`.
 | `welcome` | The greeting on the opening screen and the Not you? link. Somebody who has never published gets the first-time wording. |
 | `guide` | Every word of the How to use page. |
 | `statsLabel`, `monthNames`, `medals`, `streakMark` | The monthly leaderboard line. `{month}` in `statsLabel` becomes the month's name. Set `statsLabel` to `""` to drop the line. |
+| `placeLabel`, `tiedLabel`, `tieJoin`, `tieJoinLast` | The placing, and the longer wording used when somebody else is level. `{rank}` is the number, `{medal}` the medal for it (it brings its own leading space, and is empty past third), `{others}` the names you are level with. |
 | `logUrl`, `logTimeoutMs` | The shared log. Empty means off. |
 | `storageWords` | The wording on a storage screen. |
 | `hapticMs` | Length of the buzz when a slider crosses a snap point. `0` turns it off. Android only; iPhone ignores it. |
