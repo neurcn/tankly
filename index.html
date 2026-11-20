@@ -1123,20 +1123,50 @@ function defaultValue(screen){
 }
 /* A storage answer is one cell per cylinder. The cells that come from
    CONFIG are marked fixed and are always asked about; anything added on the
-   day is appended and can be removed again. */
-function emptyStorage(stop){
+   day is appended and can be removed again.
+
+   Given a screen id, the loose cylinders from the last check come back too.
+   A cylinder somebody put out there on Monday is still out there on Tuesday,
+   and typing it in again every round was both a chore and unreliable: the
+   room only got reported properly if the walker remembered. What does not
+   come back is the state, because what is out there has to be looked at
+   afresh rather than inherited. Taking the x to a cylinder is what says it
+   has gone, and a removed one is not carried any further. */
+function emptyStorage(stop, id){
   var conf = (stop && stop.storage) || {};
-  return {
-    cells: (conf.slots || []).map(function(slot){
-      return { gas: slot.gas, label: slot.label, state: null, fixed: true };
-    })
-  };
+  var cells = (conf.slots || []).map(function(slot){
+    return { gas: slot.gas, label: slot.label, state: null, fixed: true };
+  });
+  if (conf.allowExtra){
+    (lastStorage(id) || []).forEach(function(c){
+      if (c.state === "missing") return;
+      cells.push({ gas: c.gas, label: c.label, state: null, fixed: false });
+    });
+  }
+  return { cells: cells };
+}
+/* Two cylinders would otherwise read the same on the screen, whether that is
+   two loose CO2 or a loose N2 sitting beside the slot CONFIG calls N2, so a
+   repeated name gets numbered. CONFIG's own slots keep the names they were
+   given, and the numbering carries on past them. */
+function cellLabels(cells){
+  var base = cells.map(function(c){ return c.label || c.gas; });
+  var total = {}, seen = {};
+  base.forEach(function(b, i){
+    total[b] = (total[b] || 0) + 1;
+    if (cells[i].fixed) seen[b] = (seen[b] || 0) + 1;
+  });
+  return base.map(function(b, i){
+    if (cells[i].fixed || total[b] < 2) return b;
+    seen[b] = (seen[b] || 0) + 1;
+    return b + " (" + seen[b] + ")";
+  });
 }
 function answerFor(screen){
   var a = state.answers[screen.id];
   if (a !== undefined && a !== null) return a;
   if (screen.kind === "psi" || screen.kind === "ln") return defaultValue(screen);
-  if (screen.kind === "storage") return emptyStorage(CONFIG.route[screen.stopIndex]);
+  if (screen.kind === "storage") return emptyStorage(CONFIG.route[screen.stopIndex], screen.id);
   if (screen.kind === "phcal") return { outcome: "already" };
   if (screen.kind === "phstore") return { ok: true };
   return null;
@@ -1773,6 +1803,17 @@ function lastValue(id){
   }
   return null;
 }
+/* The loose cylinders the last check left out there, for the next round to
+   start from. Checks logged before cells travelled with the payload have
+   none, and fall back to being typed in. */
+function lastStorage(id){
+  if (!id || !lastCheck || !lastCheck.readings) return null;
+  for (var i = 0; i < lastCheck.readings.length; i++){
+    var r = lastCheck.readings[i];
+    if (r.id === id && r.cells) return r.cells;
+  }
+  return null;
+}
 function lastReading(id){
   if (!lastCheck || !lastCheck.readings) return null;
   for (var i = 0; i < lastCheck.readings.length; i++){
@@ -1853,6 +1894,11 @@ function checkPayload(){
         entry.value = a; entry.text = a + " " + sc.unit;
       } else if (sc.kind === "storage"){
         entry.value = storageText(a); entry.text = entry.value;
+        /* The loose ones only. CONFIG's slots are rebuilt from CONFIG, so
+           carrying them would list every one of them twice. */
+        entry.cells = ((a && a.cells) || [])
+          .filter(function(c){ return !c.fixed; })
+          .map(function(c){ return { gas: c.gas, label: c.label, state: c.state }; });
       } else if (sc.kind === "phcal"){
         entry.value = (a && a.outcome) || ""; entry.text = entry.value;
       } else if (sc.kind === "phstore"){
@@ -2570,7 +2616,7 @@ function screenStorage(screen){
     render();
   }
 
-  function slotRow(cell, i){
+  function slotRow(cell, i, label){
     function pickState(v){
       cell.state = (cell.state === v) ? null : v;
       buzz();
@@ -2594,12 +2640,13 @@ function screenStorage(screen){
         }}));
     }
     return h("div", { class:"slotrow" }, [
-      h("div", { class:"slotname", text: cell.label || cell.gas }),
+      h("div", { class:"slotname", text: label || cell.label || cell.gas }),
       h("div", { class:"seg" }, choices)
     ]);
   }
 
-  (answer.cells || []).forEach(function(cell, i){ body.appendChild(slotRow(cell, i)); });
+  var labels = cellLabels(answer.cells || []);
+  (answer.cells || []).forEach(function(cell, i){ body.appendChild(slotRow(cell, i, labels[i])); });
 
   if (!(answer.cells || []).length){
     body.appendChild(h("div", { class:"storenone", text: words.none }));

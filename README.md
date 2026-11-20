@@ -402,18 +402,40 @@ storage: {
 }
 ```
 
-The screen then asks about each cylinder by name, **Full**, **Empty** or
-**Missing**, so nobody counts anything and a cylinder that is not there is
-recorded as absent rather than invented as an empty. Confirm stays blocked
-until every cylinder has an answer, so a default nobody looked at can never
-reach the message. **Add a cylinder** covers anything unexpected.
+The screen then asks about each cylinder by name, so nobody counts anything.
+A slot from CONFIG answers **Full**, **Empty** or **Missing**, so a cylinder
+that is not there is recorded as absent rather than invented as an empty.
+Anything added answers **Full** or **Empty** and carries a × to take it off
+the list. Confirm stays blocked until every cylinder has an answer, so a
+default nobody looked at can never reach the message.
 
-Secondary has the three slots above. Primary has none, because it normally
-holds nothing; on the day something is out there you add it, and most days it
-is zero taps and `Storage: none`.
+Secondary has the three slots above. Primary has none, because what turns up
+there is usually a cylinder that was just swapped out, so it is added on the
+day with **Add a cylinder**.
+
+**An added cylinder stays until somebody takes it off the list.** It was out
+there yesterday, so today it is listed again rather than typed in again, and
+it keeps being listed every round until the × beside it says it has gone.
+What does not carry over is its state: a carried cylinder arrives with
+nothing selected, because what is out there has to be looked at afresh rather
+than inherited.
+
+That memory travels inside the check itself, the same way the pH week does,
+so it is shared rather than kept on one phone: a cylinder JBR added on Monday
+is waiting on your phone on Tuesday. Checks written before this existed carry
+nothing, and the room simply starts empty as it used to.
+
+Cylinders that would read the same are numbered on screen. Two loose CO₂
+become `CO₂ (1)` and `CO₂ (2)`, and a loose N₂ standing beside the slot CONFIG
+calls `N₂` becomes `N₂ (2)`. Slots keep the names CONFIG gave them.
 
 Every empty raises an ATTENTION and earns a line in the ordering list,
-wherever it is. The only difference a room's slots make is the wording: a room
+wherever it is, **and goes on doing so every round until that cylinder is
+taken off the list**. The repetition is deliberate. Somebody reading only
+today's message has to see everything still outstanding, because they will
+not think to scroll back for yesterday's and order from that.
+
+The only difference a room's slots make is the wording: a room
 that stocks spares of a gas says `No full CO2 in storage` once the last full
 one is gone, while a room like Primary, which has no slots and is just holding
 something that was swapped out, says `1 empty CO2 in storage`.
